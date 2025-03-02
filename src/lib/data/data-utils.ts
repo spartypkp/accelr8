@@ -87,8 +87,11 @@ export function getHouseStatByName(name: string): HouseStat | undefined {
 
 // Stats for 7-day workout tracking
 export function getWorkoutStats(days: number = 7): {
-	residentId: string,
-	residentName: string,
+	id: string,
+	name: string,
+	github?: string,
+	customStats: { name: string; value: number; target?: number; unit?: string; }[],
+	imagePath?: string,
 	workoutDays: number[];
 }[] {
 	// Generate a fixed set of dates instead of using Date()
@@ -113,8 +116,7 @@ export function getWorkoutStats(days: number = 7): {
 		});
 
 		return {
-			residentId: resident.id,
-			residentName: resident.name,
+			...resident,
 			workoutDays
 		};
 	});
@@ -122,8 +124,11 @@ export function getWorkoutStats(days: number = 7): {
 
 // Stats for GitHub commits
 export function getCommitStats(days: number = 7): {
-	residentId: string,
-	residentName: string,
+	id: string,
+	name: string,
+	github?: string,
+	customStats: { name: string; value: number; target?: number; unit?: string; }[],
+	imagePath?: string,
 	commitDays: { date: string, count: number; }[];
 }[] {
 	// Generate a fixed set of dates instead of using Date()
@@ -151,8 +156,7 @@ export function getCommitStats(days: number = 7): {
 		});
 
 		return {
-			residentId: resident.id,
-			residentName: resident.name,
+			...resident,
 			commitDays
 		};
 	});

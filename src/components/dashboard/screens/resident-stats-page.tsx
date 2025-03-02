@@ -45,13 +45,13 @@ export function ResidentStatsPage({
 			animate={{ opacity: 1 }}
 			exit={{ opacity: 0 }}
 			transition={{ duration: 0.5 }}
-			className={cn("h-full w-full px-6 py-4", className)}
+			className={cn("h-screen w-full flex flex-col overflow-hidden p-4 md:p-6", className)}
 		>
 			{/* Page header */}
 			<div className="flex items-center justify-between mb-4">
 				<div className="flex items-center">
-					<div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 w-10 h-10 rounded-full flex items-center justify-center mr-3">
-						<Users className="text-blue-400 h-5 w-5" />
+					<div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 w-8 h-8 rounded-full flex items-center justify-center mr-2">
+						<Users className="text-blue-400 h-4 w-4" />
 					</div>
 
 					<motion.h2
@@ -82,14 +82,14 @@ export function ResidentStatsPage({
 				initial="hidden"
 				animate="visible"
 				exit="exit"
-				className="grid grid-cols-1 md:grid-cols-2 gap-6 h-[calc(100%-4rem)]"
+				className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 flex-1 h-[calc(100vh-100px)]"
 			>
 				{residents.map((resident, index) => (
 					<motion.div
 						key={resident.id}
 						variants={cardVariants}
 						transition={{ duration: 0.4 }}
-						className="h-full"
+						className="h-full overflow-hidden"
 					>
 						<ResidentProfile resident={resident} />
 					</motion.div>

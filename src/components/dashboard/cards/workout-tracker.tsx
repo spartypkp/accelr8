@@ -1,16 +1,18 @@
 import { ProfilePicture } from '@/components/ui/profile-picture';
+import { Resident } from '@/lib/data/mock-data';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Dumbbell, Medal, Trophy } from 'lucide-react';
 import { useMemo } from 'react';
 import { DashboardCard } from './dashboard-card';
 
+// Extended resident interface with workout data
+interface ResidentWithWorkouts extends Resident {
+	workoutDays: number[];
+}
+
 interface WorkoutTrackerProps {
-	residentStats: {
-		residentId: string,
-		residentName: string,
-		workoutDays: number[];
-	}[];
+	residentStats: ResidentWithWorkouts[];
 	className?: string;
 }
 
@@ -63,29 +65,43 @@ export function WorkoutTracker({ residentStats, className }: WorkoutTrackerProps
 							const totalWorkouts = getWorkoutTotal(resident.workoutDays);
 							const BadgeIcon = index === 0 ? Trophy : Medal;
 							const badgeColor = index === 0 ? 'text-yellow-400' : index === 1 ? 'text-gray-300' : 'text-amber-600';
+							const glowColor = index === 0 ? 'shadow-yellow-500/30' : index === 1 ? 'shadow-gray-400/30' : 'shadow-amber-700/30';
 
 							return (
 								<motion.div
-									key={resident.residentId}
+									key={resident.id}
 									className="flex flex-col items-center"
 									initial={{ opacity: 0, y: 20 }}
 									animate={{ opacity: 1, y: 0 }}
 									transition={{ duration: 0.3, delay: index * 0.2 }}
 								>
 									<div className="relative">
-										<ProfilePicture
-											name={resident.residentName}
-											size={index === 0 ? "md" : "sm"}
-											square={false}
-											className={`ring-2 ${index === 0 ? 'ring-yellow-500/50' : index === 1 ? 'ring-gray-400/50' : 'ring-amber-700/50'}`}
+										<motion.div
+											className={`absolute -inset-1 rounded-full blur-md -z-10 ${index === 0 ? 'bg-yellow-500/20' : index === 1 ? 'bg-gray-400/20' : 'bg-amber-700/20'}`}
+											animate={{
+												opacity: [0.4, 0.7, 0.4],
+												scale: [0.96, 1.01, 0.96]
+											}}
+											transition={{
+												duration: 3,
+												repeat: Infinity,
+												ease: "easeInOut"
+											}}
 										/>
-										<div className={`absolute -top-1 -right-1 p-1 rounded-full bg-gray-900 ${badgeColor}`}>
-											<BadgeIcon className="w-3 h-3" />
+										<ProfilePicture
+											name={resident.name}
+											imageUrl={resident.imagePath}
+											size={index === 0 ? "lg" : "md"}
+											square={false}
+											className={`shadow-lg ${glowColor} ${index === 0 ? 'ring-2 ring-yellow-500/50' : index === 1 ? 'ring-2 ring-gray-400/50' : 'ring-2 ring-amber-700/50'}`}
+										/>
+										<div className={`absolute -top-1 -right-1 p-1.5 rounded-full bg-gray-900 ${badgeColor} shadow-lg ${glowColor}`}>
+											<BadgeIcon className={`${index === 0 ? 'w-5 h-5' : 'w-4 h-4'}`} />
 										</div>
 									</div>
-									<div className="mt-1 text-center">
-										<div className="text-xs font-medium text-white">{resident.residentName.split(' ')[0]}</div>
-										<div className={`text-xs ${badgeColor}`}>{totalWorkouts} workouts</div>
+									<div className="mt-2 text-center">
+										<div className={`${index === 0 ? 'text-sm' : 'text-xs'} font-medium text-white`}>{resident.name.split(' ')[0]}</div>
+										<div className={`${index === 0 ? 'text-sm' : 'text-xs'} font-bold ${badgeColor}`}>{totalWorkouts} workouts</div>
 									</div>
 								</motion.div>
 							);
@@ -108,20 +124,21 @@ export function WorkoutTracker({ residentStats, className }: WorkoutTrackerProps
 					</div>
 
 					{/* Residents and their workout days */}
-					<div className="space-y-2">
+					<div className="space-y-3">
 						{sortedResidents.map((resident, resIndex) => (
 							<motion.div
-								key={resident.residentId}
-								className="flex items-center"
+								key={resident.id}
+								className="flex items-center bg-gray-900/30 rounded-lg p-2 border border-gray-800/50"
 								initial={{ opacity: 0, x: -20 }}
 								animate={{ opacity: 1, x: 0 }}
 								transition={{ duration: 0.3, delay: 0.5 + (resIndex * 0.05) }}
 							>
 								<div className="w-16 flex items-center gap-2">
 									<ProfilePicture
-										name={resident.residentName}
+										name={resident.name}
+										imageUrl={resident.imagePath}
 										size="sm"
-										className="flex-shrink-0"
+										className="flex-shrink-0 shadow-md"
 									/>
 								</div>
 								<div className="flex-1 flex items-center gap-0.5">

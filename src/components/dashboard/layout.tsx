@@ -102,7 +102,7 @@ export function DashboardLayout({
 			</div>
 
 			{/* Header */}
-			<div className="relative z-10 flex justify-between items-center">
+			<div className="absolute top-0 left-0 right-0 z-50 flex justify-between items-center">
 				<div className="flex flex-col">
 					<motion.h1
 						initial={{ opacity: 0, y: -20 }}
