@@ -1,9 +1,8 @@
 import { ProfilePicture } from '@/components/ui/profile-picture';
-import { Progress } from '@/components/ui/progress';
 import { Resident } from '@/lib/data/mock-data';
-import { cn, formatNumber } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
-import { Award, Brain, Briefcase, Dumbbell, Heart, Info, User } from 'lucide-react';
+import { Award, Brain, Briefcase, Dumbbell, Github, Heart, Rocket, Star, Target } from 'lucide-react';
 
 // Extend the Resident type with the stats we need
 interface ResidentWithStats extends Resident {
@@ -53,188 +52,284 @@ export function ResidentProfile({ resident, className }: ResidentProfileProps) {
 
 	const gradientColor = generateResidentColor(resident.name);
 
+	// Match icons to stat names
+	const getStatIcon = (statName: string) => {
+		const name = statName.toLowerCase();
+
+		if (name.includes('bench') || name.includes('press') || name.includes('workout') || name.includes('exercise'))
+			return <Dumbbell className="w-4 h-4" />;
+		if (name.includes('sleep') || name.includes('mind') || name.includes('meditation'))
+			return <Brain className="w-4 h-4" />;
+		if (name.includes('heart') || name.includes('health') || name.includes('fitness'))
+			return <Heart className="w-4 h-4" />;
+		if (name.includes('goal') || name.includes('target'))
+			return <Target className="w-4 h-4" />;
+		if (name.includes('mile') || name.includes('running') || name.includes('marathon'))
+			return <Rocket className="w-4 h-4" />;
+		if (name.includes('commitment') || name.includes('score'))
+			return <Star className="w-4 h-4" />;
+
+		// Default
+		return <Award className="w-4 h-4" />;
+	};
+
 	return (
 		<motion.div
 			initial={{ opacity: 0, scale: 0.95 }}
 			animate={{ opacity: 1, scale: 1 }}
-			whileHover={{ scale: 1.02 }}
 			transition={{ duration: 0.4 }}
 			className={cn(
-				"flex flex-col h-full rounded-xl border border-gray-800 overflow-hidden bg-gray-900/60 backdrop-blur-sm",
+				"h-full rounded-xl overflow-hidden bg-gray-900/80 backdrop-blur-sm",
 				className
 			)}
 		>
-			{/* Header with profile information */}
-			<div className="relative">
-				{/* Background gradient */}
-				<div
-					className={cn(
-						"absolute inset-0 bg-gradient-to-br opacity-20 z-0",
-						gradientColor
-					)}
-				/>
+			{/* Background gradient - reduced opacity */}
+			<div className={cn(
+				"absolute inset-0 bg-gradient-to-br opacity-5 z-0",
+				gradientColor
+			)} />
 
-				{/* Profile information */}
-				<div className="relative z-10 p-5">
-					{/* Restructured layout to emphasize profile picture */}
-					<div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-6">
-						{/* Large profile picture - now more prominent with glowing effect */}
+			{/* Main content container */}
+			<div className="relative z-10 flex flex-col h-full p-3">
+				{/* Profile header - top section */}
+				<div className="flex flex-col items-center mb-4">
+					{/* Profile picture with subtle border effect */}
+					<motion.div
+						className="relative mb-3"
+						whileHover={{ scale: 1.05 }}
+						transition={{ duration: 0.2 }}
+					>
+						{/* Subtle glow effect */}
 						<motion.div
-							className="flex-shrink-0 ring-2 ring-offset-4 ring-offset-gray-900 rounded-full p-1.5 shadow-lg shadow-blue-500/20 mb-4 sm:mb-0 relative"
-							style={{ borderColor: 'rgba(59, 130, 246, 0.5)' }}
-							whileHover={{ scale: 1.05 }}
-							transition={{ duration: 0.2 }}
-						>
-							{/* Pulsing glow effect behind the profile picture */}
-							<motion.div
-								className={cn(
-									"absolute -inset-1 rounded-full blur-md -z-10",
-									gradientColor
-								)}
-								animate={{
-									opacity: [0.4, 0.7, 0.4],
-									scale: [0.96, 1.01, 0.96]
-								}}
-								transition={{
-									duration: 3,
-									repeat: Infinity,
-									ease: "easeInOut"
-								}}
-							/>
-							<ProfilePicture
-								name={resident.name}
-								imageUrl={resident.imagePath}
-								size="lg"
-								className="h-44 w-44 sm:h-48 sm:w-48"
-								showBorder
-							/>
-						</motion.div>
-
-						{/* Name, company and bio */}
-						<div className="flex-1">
-							<motion.h3
-								className={cn(
-									"text-2xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
-									gradientColor
-								)}
-							>
-								{resident.name}
-							</motion.h3>
-
-							{resident.company && (
-								<div className="flex items-center mt-1 text-sm text-gray-300">
-									<Briefcase className="w-3.5 h-3.5 mr-1.5 text-gray-400" />
-									<span>{resident.company}</span>
-								</div>
+							className={cn(
+								"absolute -inset-2 rounded-full blur-md -z-10 opacity-30",
+								gradientColor
 							)}
+							animate={{
+								opacity: [0.2, 0.4, 0.2],
+								scale: [0.96, 1.01, 0.96]
+							}}
+							transition={{
+								duration: 3,
+								repeat: Infinity,
+								ease: "easeInOut"
+							}}
+						/>
 
-							{resident.bio && (
-								<motion.div
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									transition={{ delay: 0.2 }}
-									className="mt-3 text-sm text-gray-300 line-clamp-3"
-								>
-									<q className="italic text-gray-400">{resident.bio}</q>
-								</motion.div>
-							)}
+						{/* Profile picture */}
+						<ProfilePicture
+							name={resident.name}
+							imageUrl={resident.imagePath}
+							size="xl"
+							className="ring-1 ring-gray-700 ring-offset-1 ring-offset-gray-950 shadow-lg"
+							showBorder
+						/>
+					</motion.div>
+
+					{/* Name with understated gradient text */}
+					<motion.h2
+						className="text-xl font-bold text-white"
+					>
+						{resident.name}
+						<div className={cn(
+							"h-1 w-12 rounded-full mx-auto mt-1.5",
+							"bg-gradient-to-r opacity-60",
+							gradientColor
+						)} />
+					</motion.h2>
+
+					{/* Company with icon */}
+					{resident.company && (
+						<div className="flex items-center mt-1 text-gray-300">
+							<Briefcase className="w-3.5 h-3.5 mr-1.5 text-gray-400 flex-shrink-0" />
+							<span className="text-sm">{resident.company}</span>
 						</div>
-					</div>
+					)}
 
-					{/* Divider */}
-					<div className="h-px bg-gradient-to-r from-transparent via-gray-700/50 to-transparent my-4"></div>
+					{/* Bio with quote styling */}
+					{resident.bio && (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							transition={{ delay: 0.2 }}
+							className="mt-3 text-sm text-gray-300 text-center max-w-xs mx-auto"
+						>
+							<q className="italic text-gray-400">{resident.bio}</q>
+						</motion.div>
+					)}
 				</div>
-			</div>
 
-			{/* Stats section */}
-			<div className="flex-1 p-4 overflow-y-auto">
-				<div className="flex items-center mb-3">
-					<div className="mr-2 p-1 rounded-md bg-blue-500/10">
-						<Info className="h-4 w-4 text-blue-400" />
-					</div>
-					<h3 className="font-medium text-gray-200">Personal Goals & Metrics</h3>
-				</div>
+				{/* Divider */}
+				<div className="h-px bg-gradient-to-r from-transparent via-gray-700/30 to-transparent mb-3"></div>
 
-				{/* Custom stats */}
-				{customStats.length > 0 ? (
-					<div className="space-y-3">
-						{customStats.map((stat: any, idx: number) => {
-							// Calculate percentage for the progress bar
-							const percentage = stat.target
-								? Math.min(Math.round((stat.value / stat.target) * 100), 100)
-								: 0;
+				{/* Stats section */}
+				<div className="flex-1 overflow-y-auto space-y-3 pr-1">
+					<h3 className="text-sm font-semibold text-white/90 mb-2">Personal Stats</h3>
 
-							// Determine icon based on stat name
-							let Icon = Award;
-							if (stat.name.toLowerCase().includes('sleep')) Icon = Brain;
-							else if (stat.name.toLowerCase().includes('weight')) Icon = Dumbbell;
-							else if (stat.name.toLowerCase().includes('heart')) Icon = Heart;
-							else if (stat.name.toLowerCase().includes('follow')) Icon = User;
+					{customStats.length > 0 ? (
+						<div className="grid grid-cols-1 gap-3">
+							{customStats.map((stat: any, idx: number) => {
+								// Calculate percentage for the progress bar
+								const percentage = stat.target
+									? Math.min(Math.round((stat.value / stat.target) * 100), 100)
+									: 0;
 
-							return (
-								<motion.div
-									key={idx}
-									initial={{ opacity: 0, y: 10 }}
-									animate={{ opacity: 1, y: 0 }}
-									transition={{ duration: 0.3, delay: idx * 0.1 }}
-									className="bg-gray-800/50 p-3 rounded-lg border border-gray-700/30"
-									whileHover={{
-										backgroundColor: 'rgba(31, 41, 55, 0.7)',
-										transition: { duration: 0.2 }
-									}}
-								>
-									<div className="flex justify-between items-center mb-2">
-										<div className="flex items-center">
-											<div className="p-1.5 rounded-md bg-gray-700/50 mr-2">
-												<Icon className="w-4 h-4 text-blue-400" />
-											</div>
-											<div>
-												<div className="font-medium text-sm text-gray-200">{stat.name}</div>
-												{stat.description && (
-													<div className="text-xs text-gray-400 mt-0.5">{stat.description}</div>
-												)}
+								const statIcon = getStatIcon(stat.name);
+
+								return (
+									<motion.div
+										key={idx}
+										initial={{ opacity: 0, y: 5 }}
+										animate={{ opacity: 1, y: 0 }}
+										transition={{ duration: 0.2, delay: idx * 0.05 }}
+										className="bg-gray-900/80 rounded-lg p-3 border border-gray-800/60"
+									>
+										<div className="flex justify-between items-center mb-2">
+											<div className="flex items-center">
+												<div className="bg-gray-800 p-2 rounded-md mr-3 border border-gray-700/30">
+													{statIcon}
+												</div>
+												<div>
+													<h4 className="text-sm font-medium text-gray-200">{stat.name}</h4>
+													<div className="flex items-baseline mt-0.5">
+														<span className="text-base font-bold text-white">{stat.value.toLocaleString()}</span>
+														{stat.unit &&
+															<span className="text-xs text-gray-400 ml-1">
+																{stat.unit}
+															</span>
+														}
+														{stat.target &&
+															<span className="text-xs text-gray-500 ml-2">
+																of {stat.target.toLocaleString()}
+															</span>
+														}
+													</div>
+												</div>
 											</div>
 										</div>
-										<div className="text-right">
-											<div className="text-lg font-bold text-gray-200">
-												{formatNumber(stat.value)}
-												<span className="text-xs text-gray-400 ml-1">{stat.unit}</span>
+
+										{/* Progress bar with more subtle styling */}
+										{stat.target && (
+											<div className="w-full bg-gray-800/90 rounded-full h-2 overflow-hidden mt-1">
+												<motion.div
+													initial={{ width: 0 }}
+													animate={{ width: `${percentage}%` }}
+													transition={{ duration: 1, ease: "easeOut" }}
+													className={cn(
+														"h-full rounded-full",
+														percentage >= 100
+															? "bg-green-500/70"
+															: percentage >= 80
+																? "bg-blue-500/70"
+																: percentage >= 50
+																	? "bg-amber-500/70"
+																	: "bg-orange-500/70"
+													)}
+												/>
 											</div>
-											{stat.target && (
-												<div className="text-xs text-gray-400">
-													Goal: {formatNumber(stat.target)} {stat.unit}
-												</div>
-											)}
+										)}
+									</motion.div>
+								);
+							})}
+						</div>
+					) : (
+						// Default stats when no custom stats are available
+						<div className="space-y-3">
+							{/* Workout Activity */}
+							<motion.div
+								initial={{ opacity: 0, y: 5 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.2 }}
+								className="bg-gray-900/80 rounded-lg p-3 border border-gray-800/60"
+							>
+								<div className="flex items-center mb-2">
+									<div className="p-2 bg-gray-800 rounded-md mr-3 border border-gray-700/30">
+										<Dumbbell className="w-4 h-4 text-blue-400" />
+									</div>
+									<div>
+										<h4 className="text-sm font-medium text-gray-200">Workout Activity</h4>
+										<div className="text-base font-bold text-white">
+											{workoutCount}/7 days
 										</div>
 									</div>
+								</div>
 
-									{/* Progress bar if target exists */}
-									{stat.target && (
-										<div className="mt-2">
-											<div className="flex justify-between text-xs mb-1">
-												<span className="text-gray-400">{percentage}% complete</span>
-												<span className="text-gray-500">{formatNumber(stat.value)} / {formatNumber(stat.target)}</span>
-											</div>
-											<motion.div
-												initial={{ width: 0 }}
-												animate={{ width: '100%' }}
-												transition={{ delay: 0.3, duration: 0.5 }}
-											>
-												<Progress value={percentage} className="h-1.5" />
-											</motion.div>
+								{/* Workout days indicator */}
+								<div className="flex space-x-2 mt-2">
+									{workoutStats.map((didWorkout, idx) => (
+										<motion.div
+											key={idx}
+											initial={{ opacity: 0, scale: 0.8 }}
+											animate={{ opacity: 1, scale: 1 }}
+											transition={{ duration: 0.2, delay: idx * 0.05 }}
+											className={cn(
+												"flex-1 h-8 rounded-md flex items-center justify-center text-xs font-medium",
+												didWorkout
+													? "bg-gray-800 text-blue-300 border border-blue-500/30"
+													: "bg-gray-800/50 text-gray-500 border border-gray-800/60"
+											)}
+										>
+											{["M", "T", "W", "T", "F", "S", "S"][idx]}
+										</motion.div>
+									))}
+								</div>
+							</motion.div>
+
+							{/* GitHub Activity */}
+							<motion.div
+								initial={{ opacity: 0, y: 5 }}
+								animate={{ opacity: 1, y: 0 }}
+								transition={{ duration: 0.2, delay: 0.1 }}
+								className="bg-gray-900/80 rounded-lg p-3 border border-gray-800/60"
+							>
+								<div className="flex items-center mb-2">
+									<div className="p-2 bg-gray-800 rounded-md mr-3 border border-gray-700/30">
+										<Github className="w-4 h-4 text-purple-400" />
+									</div>
+									<div>
+										<h4 className="text-sm font-medium text-gray-200">GitHub Commits</h4>
+										<div className="text-base font-bold text-white">
+											{totalCommits} total
 										</div>
-									)}
-								</motion.div>
-							);
-						})}
-					</div>
-				) : (
-					<div className="flex flex-col items-center justify-center h-40 text-center text-gray-500">
-						<User className="h-8 w-8 mb-2 opacity-20" />
-						<p>No personal metrics available</p>
-						<p className="text-sm">This resident hasn't set any goals yet</p>
-					</div>
-				)}
+									</div>
+								</div>
+
+								{/* Commit activity bars with more subtle styling */}
+								<div className="flex items-end space-x-2 h-12 mt-2 bg-gray-800/80 rounded-lg p-2">
+									{commitStats.map((commitCount, idx) => {
+										// Calculate height percentage (max height of 100%)
+										const maxCommitCount = Math.max(...commitStats, 3); // minimum 3 for scale
+										const heightPercentage = (commitCount / maxCommitCount) * 100;
+
+										return (
+											<motion.div
+												key={idx}
+												initial={{ height: "5%" }}
+												animate={{ height: `${Math.max(heightPercentage, 5)}%` }}
+												transition={{ duration: 0.6, delay: idx * 0.05 }}
+												className={cn(
+													"flex-1 rounded-md flex items-center justify-center text-xs",
+													commitCount > 0
+														? "bg-purple-600/70 text-white"
+														: "bg-gray-700/30"
+												)}
+											>
+												{commitCount > 0 && (
+													<span>{commitCount}</span>
+												)}
+											</motion.div>
+										);
+									})}
+								</div>
+
+								<div className="flex justify-between text-xs text-gray-500 mt-1">
+									<span>7 days ago</span>
+									<span>Today</span>
+								</div>
+							</motion.div>
+						</div>
+					)}
+				</div>
 			</div>
 		</motion.div>
 	);

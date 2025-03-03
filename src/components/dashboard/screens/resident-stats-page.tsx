@@ -49,7 +49,7 @@ export function ResidentStatsPage({
 		>
 			{/* Page header */}
 			<div className="flex items-center justify-between mb-4">
-				<div className="flex items-center">
+				<div className="flex items-center justify-center">
 					<div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 w-8 h-8 rounded-full flex items-center justify-center mr-2">
 						<Users className="text-blue-400 h-4 w-4" />
 					</div>

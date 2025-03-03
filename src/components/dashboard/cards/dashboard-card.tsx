@@ -22,17 +22,17 @@ export function DashboardCard({
 	return (
 		<div
 			className={cn(
-				"rounded-xl bg-gray-900/90 border border-gray-800 p-4 flex flex-col h-full",
+				"rounded-xl bg-gray-900/90 border border-gray-800 p-2 sm:p-3 lg:p-4 flex flex-col h-full",
 				fullHeight && "h-full",
 				className
 			)}
 		>
 			{title && (
 				<div className={cn(
-					"text-lg font-semibold mb-2 pb-2 border-b border-gray-800 bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text flex-shrink-0",
+					"text-base sm:text-lg font-semibold mb-1 sm:mb-2 pb-1 sm:pb-2 border-b border-gray-800 bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text flex-shrink-0",
 					titleClassName
 				)}>
-					{titleIcon && <span className="mr-2">{titleIcon}</span>}
+					{titleIcon && <span className="mr-1 sm:mr-2">{titleIcon}</span>}
 					{title}
 				</div>
 			)}
