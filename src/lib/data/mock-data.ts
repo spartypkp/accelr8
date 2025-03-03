@@ -60,8 +60,8 @@ export const residents: Resident[] = [
 		name: 'Will Diamond',
 		github: 'alexchendev',
 		customStats: [
-			{ name: 'Bench Press', value: 315, target: 425, unit: 'lbs' },
-			{ name: 'Sleep Score', value: 85, target: 90, unit: '%' }
+			{ name: 'Bench Press', value: 385, target: 425, unit: 'lbs' },
+			{ name: 'Sleep Score', value: 92, target: 95, unit: '%' }
 		],
 		bio: 'Will is an AI engineer with a passion for building products that help people live better lives.',
 		company: 'Latent Space',
@@ -72,7 +72,7 @@ export const residents: Resident[] = [
 		name: 'Daniel Accelr8',
 		github: 'jtaylor42',
 		customStats: [
-			{ name: 'Running', value: 15, target: 20, unit: 'miles/week' },
+			{ name: 'Running', value: 18, target: 25, unit: 'miles/week' },
 			{ name: 'Meditation', value: 5, target: 7, unit: 'days/week' }
 		],
 		bio: 'Creator and manager of Accelr8.',
@@ -111,8 +111,8 @@ export const residents: Resident[] = [
 			{ name: 'Commits', value: 28, target: 35, unit: '/week' },
 			{ name: 'Pull-ups', value: 12, target: 20, unit: '/session' }
 		],
-		bio: 'Entrepeuneru and startup founder.',
-		company: 'Fake.Company',
+		bio: 'Entrepreneur and startup founder.',
+		company: 'Self Employed',
 		imagePath: '/residents/conor.jpg'
 	},
 	// Adding more residents to reach a total of 15
@@ -142,7 +142,7 @@ export const residents: Resident[] = [
 	},
 	{
 		id: 'r8',
-		name: 'Ege Accelr8',
+		name: 'Ege Gunduz',
 		github: 'asmith',
 		customStats: [
 			{ name: 'New Technologies', value: 2, target: 4, unit: '/quarter' },
@@ -189,26 +189,26 @@ export const residents: Resident[] = [
 	},
 	{
 		id: 'r12',
-		name: 'Ocean French',
+		name: 'Ocean Droz',
 		github: 'jpark',
 		customStats: [
 			{ name: 'Squats', value: 225, target: 275, unit: 'lbs' },
 			{ name: 'Languages Learning', value: 2, target: 3, unit: 'active' }
 		],
-		bio: 'Building a startup for AI in education',
-		company: 'Will doesn\'t know',
+		bio: 'Building an AI assistant to revolutionize education.',
+		company: 'Diane',
 		imagePath: '/residents/ocean.jpg'
 	},
 	{
 		id: 'r13',
-		name: 'Akshay Accelr8',
+		name: 'Akshay Iyer',
 		github: 'sgarcia',
 		customStats: [
 			{ name: 'Networking Events', value: 2, target: 3, unit: '/month' },
 			{ name: 'Design Projects', value: 3, target: 4, unit: '/quarter' }
 		],
-		bio: 'Building a startup as part of founders inc',
-		company: 'Will doesn\'t know',
+		bio: '\'Don\'t ask me hard hitting questions!\'',
+		company: 'He Wish He Knew',
 		imagePath: '/residents/akshay.jpg'
 	},
 	{
@@ -338,77 +338,139 @@ export const announcements: Announcement[] = [
 	}
 ];
 
-// Mock Competitive Stats
+// Mock Competitive Stats - Update to make Will (r1) always win and cover longer time periods (30 days)
 export const competitiveStats: CompetitiveStat[] = [
-	// GitHub Commits (last 7 days for each resident)
-	...[...Array(7)].flatMap((_, i) => {
+	// GitHub Commits (last 30 days for each resident)
+	...[...Array(30)].flatMap((_, i) => {
 		// Use a fixed date instead of dynamic date
 		const date = new Date('2024-03-15');
 		date.setDate(date.getDate() - i);
 		const dateStr = date.toISOString().split('T')[0];
 
-		return residents.map((resident, residentIndex) => ({
-			residentId: resident.id,
-			category: 'github_commits',
-			// Use deterministic values based on resident index and day
-			value: ((residentIndex + 1) * (i + 1)) % 10,
-			date: dateStr
-		}));
+		return residents.map((resident) => {
+			// Make Will always have the highest commit count
+			let value;
+			if (resident.id === 'r1') {
+				// Will: higher commits with a pattern showing growth
+				value = Math.floor(10 + (30 - i) / 3 + Math.sin(i / 3) * 3);
+			} else {
+				// Other residents: varied but always less than Will
+				const baseValue = Math.floor(7 + Math.sin(i / 2 + parseInt(resident.id.substring(1))) * 4);
+				value = Math.max(0, baseValue);
+			}
+
+			return {
+				residentId: resident.id,
+				category: 'github_commits',
+				value,
+				date: dateStr
+			};
+		});
 	}),
 
-	// Workout days (last 7 days for each resident)
-	...[...Array(7)].flatMap((_, i) => {
+	// Workout days (last 30 days for each resident)
+	...[...Array(30)].flatMap((_, i) => {
 		// Use a fixed date instead of dynamic date
 		const date = new Date('2024-03-15');
 		date.setDate(date.getDate() - i);
 		const dateStr = date.toISOString().split('T')[0];
 
-		return residents.map((resident, residentIndex) => ({
-			residentId: resident.id,
-			category: 'workouts',
-			// Use deterministic values based on resident index and day
-			value: ((residentIndex + i) % 2),
-			date: dateStr
-		}));
+		return residents.map((resident) => {
+			// Make Will always have the most consistent workout pattern
+			let value;
+			if (resident.id === 'r1') {
+				// Will: works out almost every day (6-7 days per week)
+				value = (i % 7 === 6) ? 0 : 1; // One rest day per week
+			} else {
+				// Other residents: less consistent patterns
+				// Use resident ID in calculation to create different patterns for each resident
+				const pattern = parseInt(resident.id.substring(1)) % 4;
+
+				if (pattern === 0) {
+					// 3 days on, 1 day off pattern
+					value = (i % 4 < 3) ? 1 : 0;
+				} else if (pattern === 1) {
+					// Weekend warrior
+					value = (i % 7 === 0 || i % 7 === 6) ? 1 : 0;
+				} else if (pattern === 2) {
+					// Every other day
+					value = (i % 2 === 0) ? 1 : 0;
+				} else {
+					// Random but sparse pattern
+					value = (Math.sin(i + parseInt(resident.id.substring(1))) > 0.7) ? 1 : 0;
+				}
+			}
+
+			return {
+				residentId: resident.id,
+				category: 'workouts',
+				value,
+				date: dateStr
+			};
+		});
 	})
 ];
 
-// Mock House Stats
+// Mock House Stats - More interesting with higher contrasts
 export const houseStats: HouseStat[] = [
 	{
 		name: 'Total Social Media Followers',
-		value: 42500,
-		previousValue: 40200,
+		value: 75800,
+		previousValue: 52400,
 		unit: 'followers'
 	},
 	{
 		name: 'House MRR',
-		value: 83500,
-		previousValue: 75000,
+		value: 127500,
+		previousValue: 83500,
 		unit: 'USD'
 	},
 	{
 		name: 'Beers Consumed (Month)',
-		value: 87,
-		previousValue: 76,
+		value: 187,
+		previousValue: 120,
 		unit: 'beers'
 	},
 	{
 		name: 'Pizza Ordered (Month)',
-		value: 12,
-		previousValue: 15,
+		value: 28,
+		previousValue: 12,
 		unit: 'pizzas'
 	},
 	{
 		name: 'Coffee Brewed (Week)',
-		value: 85,
-		previousValue: 78,
+		value: 185,
+		previousValue: 125,
 		unit: 'cups'
 	},
 	{
 		name: 'Avg. Sleep Score',
-		value: 78,
-		previousValue: 75,
+		value: 83,
+		previousValue: 72,
 		unit: '%'
+	},
+	{
+		name: 'Lines of Code Written',
+		value: 189300,
+		previousValue: 134500,
+		unit: 'lines'
+	},
+	{
+		name: 'Networking Hours',
+		value: 215,
+		previousValue: 176,
+		unit: 'hours'
+	},
+	{
+		name: 'Group Exercise Sessions',
+		value: 47,
+		previousValue: 32,
+		unit: 'sessions'
+	},
+	{
+		name: 'Collaborative Projects',
+		value: 24,
+		previousValue: 15,
+		unit: 'projects'
 	}
 ]; 
