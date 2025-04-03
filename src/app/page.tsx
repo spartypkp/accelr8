@@ -1,45 +1,200 @@
 "use client";
 
-import { DashboardLayout } from '@/components/dashboard/layout';
-import { AdminDashboard } from '@/components/dashboard/screens/admin-dashboard';
-import { CompetitiveStatsDashboard } from '@/components/dashboard/screens/competitive-stats-dashboard';
-import { HouseStatsDashboard } from '@/components/dashboard/screens/house-stats-dashboard';
-import { ResidentStatsDashboard } from '@/components/dashboard/screens/resident-stats-dashboard';
+import { PublicLayout } from '@/components/layout/public-layout';
 import { Button } from '@/components/ui/button';
-import { Tv } from 'lucide-react';
+import { ArrowRight, Globe, RefreshCw, Target, TrendingUp, Users, Wrench } from 'lucide-react';
 import Link from 'next/link';
 
-export default function Home() {
-	// Get all dashboard screens including resident groups
-	const residentDashboards = <ResidentStatsDashboard />;
-
+export default function HomePage() {
 	return (
-		<>
-			{/* TV Dashboard Link */}
-			<div className="fixed top-4 right-4 z-80">
-				<Button asChild variant="outline" className="bg-black/40 backdrop-blur-sm border-gray-700 hover:bg-black/60">
-					<Link href="/tv" className="flex items-center gap-2">
-						<Tv className="h-4 w-4" />
-						<span>TV Mode</span>
-					</Link>
-				</Button>
-			</div>
+		<PublicLayout>
+			{/* Hero Section */}
+			<section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
+				<div className="absolute inset-0 bg-gradient-to-b from-black via-gray-950 to-blue-950 z-0"></div>
+				<div className="container mx-auto px-4 relative z-10">
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+						<div className="space-y-6">
+							<h1 className="text-4xl md:text-6xl font-bold">
+								<span className="bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+									Accelerate
+								</span> Your Startup Journey
+							</h1>
+							<p className="text-lg md:text-xl text-gray-300 max-w-lg">
+								Join a community of founders, builders, and innovators in
+								a high-talent-density living environment designed to help you succeed.
+							</p>
+							<div className="flex flex-col sm:flex-row gap-4">
+								<Button asChild size="lg">
+									<Link href="/apply">
+										Apply Now
+										<ArrowRight className="ml-2 h-4 w-4" />
+									</Link>
+								</Button>
+								<Button asChild variant="outline" size="lg">
+									<Link href="/houses">
+										Explore Houses
+									</Link>
+								</Button>
+							</div>
+						</div>
+						<div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden shadow-2xl">
+							<div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 mix-blend-overlay z-10"></div>
+							{/* Placeholder for actual image */}
+							<div className="absolute inset-0 bg-gray-800"></div>
+							{/* Uncomment when real image is available */}
+							{/* <Image 
+								src="/images/house-exterior.jpg"
+								alt="Accelr8 Hacker House"
+								fill
+								style={{ objectFit: 'cover' }}
+							/> */}
+						</div>
+					</div>
+				</div>
+			</section>
 
-			{/* Existing Dashboard Layout with improved settings */}
-			<DashboardLayout
-				autoRotate={false}
-				rotationInterval={15000}
-				minimal={false}
-				showHeader={true}
-				showAddress={true}
-				background="default"
-			>
-				<AdminDashboard />
-				<CompetitiveStatsDashboard />
-				<HouseStatsDashboard />
-				{/* ResidentStatsDashboard now returns multiple screens */}
-				{residentDashboards}
-			</DashboardLayout>
-		</>
+			{/* Features Section */}
+			<section className="py-20 bg-gray-950">
+				<div className="container mx-auto px-4">
+					<div className="text-center max-w-3xl mx-auto mb-16">
+						<h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Accelr8?</h2>
+						<p className="text-gray-400">
+							We've designed our houses with founders in mind, providing everything you need
+							to build, connect, and succeed.
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+						{[
+							{
+								title: "Community",
+								description: "Live and work alongside talented founders, engineers, and designers.",
+								icon: <Users className="h-8 w-8 text-blue-400" />,
+							},
+							{
+								title: "Resources",
+								description: "Access dedicated workspaces, high-speed internet, and event spaces.",
+								icon: <Wrench className="h-8 w-8 text-purple-400" />,
+							},
+							{
+								title: "Network",
+								description: "Connect with investors, mentors, and potential co-founders.",
+								icon: <Globe className="h-8 w-8 text-green-400" />,
+							},
+							{
+								title: "Flexibility",
+								description: "Choose from various house locations and stay options that fit your needs.",
+								icon: <RefreshCw className="h-8 w-8 text-yellow-400" />,
+							},
+							{
+								title: "Events",
+								description: "Participate in hackathons, demo days, and social gatherings.",
+								icon: <Target className="h-8 w-8 text-red-400" />,
+							},
+							{
+								title: "Growth",
+								description: "Get feedback, learn from peers, and accelerate your startup growth.",
+								icon: <TrendingUp className="h-8 w-8 text-teal-400" />,
+							},
+						].map((feature, index) => (
+							<div key={index} className="bg-gray-900 p-6 rounded-lg border border-gray-800 hover:border-blue-600 transition-colors">
+								<div className="mb-4">{feature.icon}</div>
+								<h3 className="text-xl font-bold mb-2">{feature.title}</h3>
+								<p className="text-gray-400">{feature.description}</p>
+							</div>
+						))}
+					</div>
+				</div>
+			</section>
+
+			{/* Houses Preview Section */}
+			<section className="py-20 bg-gradient-to-b from-gray-950 to-blue-950">
+				<div className="container mx-auto px-4">
+					<div className="text-center max-w-3xl mx-auto mb-16">
+						<h2 className="text-3xl md:text-4xl font-bold mb-4">Our Houses</h2>
+						<p className="text-gray-400">
+							Explore our growing network of coliving spaces designed for innovation.
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+						{/* House Card (Sample - To be replaced with actual data) */}
+						<div className="bg-gray-900 rounded-lg overflow-hidden border border-gray-800 shadow-lg">
+							<div className="h-48 relative">
+								<div className="absolute inset-0 bg-gray-800"></div>
+								{/* Uncomment when real image is available */}
+								{/* <Image 
+									src="/images/sf-house.jpg"
+									alt="San Francisco House"
+									fill
+									style={{ objectFit: 'cover' }}
+								/> */}
+							</div>
+							<div className="p-6">
+								<h3 className="text-xl font-bold mb-2">San Francisco - Nob Hill</h3>
+								<p className="text-gray-400 mb-4">
+									Our flagship location in the heart of San Francisco with stunning city views.
+								</p>
+								<div className="flex flex-wrap gap-2 mb-4">
+									<span className="bg-blue-900/30 text-blue-400 text-xs px-2 py-1 rounded">
+										20 Residents
+									</span>
+									<span className="bg-purple-900/30 text-purple-400 text-xs px-2 py-1 rounded">
+										Startup Focused
+									</span>
+								</div>
+								<Button asChild variant="outline" className="w-full">
+									<Link href="/houses/sf-nob-hill">
+										View Details
+									</Link>
+								</Button>
+							</div>
+						</div>
+
+						{/* Additional houses would be added here */}
+
+						{/* View All Houses */}
+						<div className="bg-blue-950/30 rounded-lg overflow-hidden border border-blue-800/30 shadow-lg flex flex-col justify-center items-center p-6 h-full">
+							<h3 className="text-xl font-bold mb-4 text-center">Discover All Locations</h3>
+							<p className="text-gray-400 mb-6 text-center">
+								Explore our growing network of houses across multiple cities.
+							</p>
+							<Button asChild>
+								<Link href="/houses">
+									View All Houses
+									<ArrowRight className="ml-2 h-4 w-4" />
+								</Link>
+							</Button>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			{/* Call to Action */}
+			<section className="py-20 bg-black">
+				<div className="container mx-auto px-4">
+					<div className="max-w-4xl mx-auto text-center">
+						<h2 className="text-3xl md:text-5xl font-bold mb-6">
+							Ready to Accelerate Your Startup?
+						</h2>
+						<p className="text-xl text-gray-300 mb-8">
+							Join our community of founders and innovators today.
+						</p>
+						<div className="flex flex-col sm:flex-row justify-center gap-4">
+							<Button asChild size="lg">
+								<Link href="/apply">
+									Apply Now
+								</Link>
+							</Button>
+							<Button asChild variant="outline" size="lg">
+								<Link href="/contact">
+									Contact Us
+								</Link>
+							</Button>
+						</div>
+					</div>
+				</div>
+			</section>
+		</PublicLayout>
 	);
 }
