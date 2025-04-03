@@ -1,33 +1,59 @@
-'use client';
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-import { useAuth } from "@/lib/auth/context";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+export default async function DashboardHomePage() {
+	// Redirect should happen in the layout, but we'll handle it here as well
+	const user = await getCurrentUser();
 
-export default function DashboardIndexPage() {
-	const router = useRouter();
-	const { user, isLoading } = useAuth();
+	if (!user) {
+		redirect("/login");
+	}
 
-	useEffect(() => {
-		if (!isLoading) {
-			// If user is authenticated, redirect to the San Francisco house dashboard (or other default)
-			// In a real app, this would check the user's assigned house from the database
-			if (user) {
-				router.push('/dashboard/sf');
-			} else {
-				// If not authenticated, redirect to login
-				router.push('/login?redirect=/dashboard');
-			}
+	// Handle different user roles
+	if (user.role === 'resident') {
+		// Get the user's current residency
+		const supabase = await import("@/lib/supabase/client").then(
+			(mod) => mod.createClient()
+		);
+
+		const { data: residency } = await supabase
+			.from("residencies")
+			.select("sanity_house_id")
+			.eq("user_id", user.id)
+			.eq("status", "active")
+			.single();
+
+		// If user has an active residency, redirect to their house dashboard
+		if (residency && residency.sanity_house_id) {
+			redirect(`/dashboard/${residency.sanity_house_id}`);
+		} else {
+			// If no active residency, show them houses
+			redirect("/houses");
 		}
-	}, [user, isLoading, router]);
+	} else if (user.role === 'admin') {
+		// For admins, get their managed houses
+		const supabase = await import("@/lib/supabase/client").then(
+			(mod) => mod.createClient()
+		);
 
-	return (
-		<div className="min-h-screen flex items-center justify-center bg-gray-900">
-			<div className="text-center">
-				<div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
-				<h2 className="text-xl font-medium text-gray-200">Loading your dashboard...</h2>
-				<p className="text-gray-400 mt-2">Please wait while we redirect you to your house dashboard.</p>
-			</div>
-		</div>
-	);
+		const { data: houses } = await supabase
+			.from("house_admins")
+			.select("sanity_house_id")
+			.eq("user_id", user.id)
+			.limit(1);
+
+		// If admin manages a house, redirect to that house's admin page
+		if (houses && houses.length > 0) {
+			redirect(`/admin/${houses[0].sanity_house_id}`);
+		} else {
+			// Fallback to admin overview
+			redirect("/admin");
+		}
+	} else if (user.role === 'super_admin') {
+		// Super admins see the global admin dashboard
+		redirect("/admin");
+	}
+
+	// Fallback for any other case
+	redirect("/houses");
 } 

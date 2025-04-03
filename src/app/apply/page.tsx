@@ -2,6 +2,7 @@
 
 import { PublicLayout } from "@/components/layout/public-layout";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
 import {
 	Card,
 	CardContent,
@@ -18,6 +19,7 @@ import {
 	FormLabel
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -27,10 +29,16 @@ import {
 } from "@/components/ui/select";
 import {
 	Tabs,
-	TabsContent
+	TabsContent,
+	TabsList,
+	TabsTrigger
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/use-toast";
+import { ApplicationData, getHouseIdFromSlug, submitApplication } from "@/lib/applications";
+import { useAuth } from "@/lib/auth";
 import { zodResolver } from '@hookform/resolvers/zod';
+import { format } from "date-fns";
 import {
 	ArrowRight,
 	Building,
@@ -45,74 +53,198 @@ import {
 	User
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
-// Define schema with zod for form validation
-const formSchema = z.object({
-	firstName: z.string().min(1, "First name is required"),
-	lastName: z.string().min(1, "Last name is required"),
-	email: z.string().email("Please enter a valid email"),
-	phone: z.string().min(1, "Phone number is required"),
-	dob: z.string().min(1, "Date of birth is required"),
-	preferredLocation: z.string().optional(),
-	roomType: z.string().optional(),
-	moveInDate: z.string().optional(),
-	stayDuration: z.string().optional(),
-	// Background fields
-	role: z.string().optional(),
-	company: z.string().optional(),
-	linkedin: z.string().optional(),
-	website: z.string().optional(),
-	github: z.string().optional(),
-	workDescription: z.string().optional(),
-	goals: z.string().optional(),
-	// Additional fields
-	howHeard: z.string().optional(),
-	referredBy: z.string().optional(),
-	knownResidents: z.string().optional(),
-	dietaryRestrictions: z.string().optional(),
-	additionalInfo: z.string().optional(),
-	terms: z.boolean().optional(),
-	notifications: z.boolean().optional()
+// Application form schema
+const applicationSchema = z.object({
+	personalInfo: z.object({
+		firstName: z.string().min(2, { message: "First name must be at least 2 characters." }),
+		lastName: z.string().min(2, { message: "Last name must be at least 2 characters." }),
+		email: z.string().email({ message: "Please enter a valid email address." }),
+		phone: z.string().min(10, { message: "Please enter a valid phone number." }),
+		dob: z.date({ required_error: "Please select your date of birth." }),
+	}),
+	preferences: z.object({
+		location: z.string({ required_error: "Please select a location." }),
+		roomType: z.string({ required_error: "Please select a room type." }),
+		moveInDate: z.date({ required_error: "Please select your desired move-in date." }),
+		duration: z.string({ required_error: "Please select your expected length of stay." }),
+	}),
+	background: z.object({
+		role: z.string().min(2, { message: "Please enter your role." }),
+		company: z.string().min(2, { message: "Please enter your company." }),
+		linkedin: z.string().url({ message: "Please enter a valid LinkedIn URL." }).optional().or(z.literal("")),
+		github: z.string().url({ message: "Please enter a valid GitHub URL." }).optional().or(z.literal("")),
+		website: z.string().url({ message: "Please enter a valid website URL." }).optional().or(z.literal("")),
+		workDescription: z.string().min(10, { message: "Please provide a brief description of your work." }),
+		goals: z.string().min(10, { message: "Please describe your goals." }),
+	}),
+	additional: z.object({
+		howHeard: z.string({ required_error: "Please select how you heard about us." }),
+		referredBy: z.string().optional(),
+		knownResidents: z.string().optional(),
+		dietaryRestrictions: z.string().optional(),
+		additionalInfo: z.string().optional(),
+	}),
+	terms: z.boolean().refine((value) => value === true, {
+		message: "You must agree to the terms and conditions.",
+	}),
 });
 
-export default function ApplyPage() {
-	// Initialize form with react-hook-form
-	const form = useForm<z.infer<typeof formSchema>>({
-		resolver: zodResolver(formSchema),
+type ApplicationFormValues = z.infer<typeof applicationSchema>;
+
+export default function ApplicationPage() {
+	const { toast } = useToast();
+	const searchParams = useSearchParams();
+	const router = useRouter();
+	const { user } = useAuth();
+
+	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [activeStep, setActiveStep] = useState("personal");
+	const [selectedLocation, setSelectedLocation] = useState(searchParams.get("location") || "");
+
+	// Initialize form with defaults
+	const form = useForm<ApplicationFormValues>({
+		resolver: zodResolver(applicationSchema),
 		defaultValues: {
-			firstName: "",
-			lastName: "",
-			email: "",
-			phone: "",
-			dob: "",
-			preferredLocation: "",
-			roomType: "",
-			moveInDate: "",
-			stayDuration: "",
-			role: "",
-			company: "",
-			linkedin: "",
-			website: "",
-			github: "",
-			workDescription: "",
-			goals: "",
-			howHeard: "",
-			referredBy: "",
-			knownResidents: "",
-			dietaryRestrictions: "",
-			additionalInfo: "",
+			personalInfo: {
+				firstName: "",
+				lastName: "",
+				email: user?.email || "",
+				phone: "",
+				dob: undefined,
+			},
+			preferences: {
+				location: selectedLocation,
+				roomType: searchParams.get("roomType") || "",
+				moveInDate: undefined,
+				duration: "",
+			},
+			background: {
+				role: "",
+				company: "",
+				linkedin: "",
+				github: "",
+				website: "",
+				workDescription: "",
+				goals: "",
+			},
+			additional: {
+				howHeard: "",
+				referredBy: "",
+				knownResidents: "",
+				dietaryRestrictions: "",
+				additionalInfo: "",
+			},
 			terms: false,
-			notifications: true
-		}
+		},
 	});
 
-	function onSubmit(values: z.infer<typeof formSchema>) {
-		// Handle form submission
-		console.log(values);
-		// In production, would submit to API
-		alert("Application submitted successfully!");
+	// Function to handle form submission
+	async function onSubmit(values: ApplicationFormValues) {
+		setIsSubmitting(true);
+
+		try {
+			// Get house ID from the selected location
+			const houseId = await getHouseIdFromSlug(values.preferences.location);
+
+			// Prepare application data
+			const applicationData: ApplicationData = {
+				user_id: user?.id,
+				sanity_house_id: houseId,
+				preferred_move_in: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
+				preferred_duration: values.preferences.duration,
+				status: 'submitted',
+				responses: {
+					personalInfo: {
+						firstName: values.personalInfo.firstName,
+						lastName: values.personalInfo.lastName,
+						email: values.personalInfo.email,
+						phone: values.personalInfo.phone,
+						dob: format(values.personalInfo.dob, 'yyyy-MM-dd'),
+					},
+					preferences: {
+						roomType: values.preferences.roomType,
+					},
+					background: {
+						role: values.background.role,
+						company: values.background.company,
+						linkedin: values.background.linkedin,
+						github: values.background.github,
+						website: values.background.website,
+						workDescription: values.background.workDescription,
+						goals: values.background.goals,
+					},
+					additional: {
+						howHeard: values.additional.howHeard,
+						referredBy: values.additional.referredBy,
+						knownResidents: values.additional.knownResidents,
+						dietaryRestrictions: values.additional.dietaryRestrictions,
+						additionalInfo: values.additional.additionalInfo,
+					},
+				},
+			};
+
+			// Submit the application
+			const result = await submitApplication(applicationData);
+
+			toast({
+				title: "Application Submitted Successfully",
+				description: "We will review your application and get back to you soon.",
+				variant: "default",
+			});
+
+			// Redirect to thank you page
+			router.push('/apply/thank-you');
+		} catch (error) {
+			console.error('Application submission error:', error);
+			toast({
+				title: "Application Submission Failed",
+				description: "There was an error submitting your application. Please try again.",
+				variant: "destructive",
+			});
+		} finally {
+			setIsSubmitting(false);
+		}
+	}
+
+	async function goToNextStep() {
+		if (activeStep === "personal") {
+			const personalInfoValid = await form.trigger('personalInfo', { shouldFocus: true });
+			if (personalInfoValid) {
+				setActiveStep("preferences");
+			}
+		} else if (activeStep === "preferences") {
+			const preferencesValid = await form.trigger('preferences', { shouldFocus: true });
+			if (preferencesValid) {
+				setActiveStep("background");
+			}
+		} else if (activeStep === "background") {
+			const backgroundValid = await form.trigger('background', { shouldFocus: true });
+			if (backgroundValid) {
+				setActiveStep("additional");
+			}
+		} else if (activeStep === "additional") {
+			const additionalValid = await form.trigger(['additional', 'terms'], { shouldFocus: true });
+			if (additionalValid) {
+				setActiveStep("review");
+			}
+		}
+	}
+
+	function goToPreviousStep() {
+		if (activeStep === "preferences") {
+			setActiveStep("personal");
+		} else if (activeStep === "background") {
+			setActiveStep("preferences");
+		} else if (activeStep === "additional") {
+			setActiveStep("background");
+		} else if (activeStep === "review") {
+			setActiveStep("additional");
+		}
 	}
 
 	return (
@@ -176,8 +308,14 @@ export default function ApplyPage() {
 								{/* Form Tabs */}
 								<Form {...form}>
 									<form onSubmit={form.handleSubmit(onSubmit)}>
-										<Tabs defaultValue="basic-info" className="w-full">
-											<TabsContent value="basic-info" className="space-y-6 p-6">
+										<Tabs defaultValue="personal" className="w-full" value={activeStep}>
+											<TabsList className="grid w-full grid-cols-4">
+												<TabsTrigger value="personal">Personal Info</TabsTrigger>
+												<TabsTrigger value="preferences">Preferences</TabsTrigger>
+												<TabsTrigger value="background">Background</TabsTrigger>
+												<TabsTrigger value="additional">Additional Info</TabsTrigger>
+											</TabsList>
+											<TabsContent value="personal" className="space-y-6 p-6">
 												<div>
 													<h2 className="text-2xl font-bold mb-2">Basic Information</h2>
 													<p className="text-gray-400 mb-6">Let's start with some basic details about you.</p>
@@ -186,7 +324,7 @@ export default function ApplyPage() {
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 															<FormField
 																control={form.control}
-																name="firstName"
+																name="personalInfo.firstName"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
@@ -198,7 +336,7 @@ export default function ApplyPage() {
 															/>
 															<FormField
 																control={form.control}
-																name="lastName"
+																name="personalInfo.lastName"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
@@ -212,7 +350,7 @@ export default function ApplyPage() {
 
 														<FormField
 															control={form.control}
-															name="email"
+															name="personalInfo.email"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
 																	<FormLabel>Email <span className="text-red-500">*</span></FormLabel>
@@ -226,7 +364,7 @@ export default function ApplyPage() {
 
 														<FormField
 															control={form.control}
-															name="phone"
+															name="personalInfo.phone"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
 																	<FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
@@ -239,93 +377,32 @@ export default function ApplyPage() {
 
 														<FormField
 															control={form.control}
-															name="dob"
+															name="personalInfo.dob"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
 																	<FormLabel>Date of Birth <span className="text-red-500">*</span></FormLabel>
 																	<FormControl>
-																		<Input type="date" {...field} />
+																		<Popover>
+																			<PopoverTrigger>
+																				<FormControl>
+																					<Input
+																						placeholder="Select date"
+																						value={field.value ? format(field.value, 'PP') : ''}
+																						readOnly
+																					/>
+																				</FormControl>
+																			</PopoverTrigger>
+																			<PopoverContent className="w-auto p-0">
+																				<Calendar
+																					mode="single"
+																					selected={field.value}
+																					onSelect={field.onChange}
+																					initialFocus
+																				/>
+																			</PopoverContent>
+																		</Popover>
 																	</FormControl>
 																	<p className="text-xs text-gray-400">You must be at least 18 years old.</p>
-																</FormItem>
-															)}
-														/>
-
-														<FormField
-															control={form.control}
-															name="preferredLocation"
-															render={({ field }) => (
-																<FormItem className="space-y-2">
-																	<FormLabel>Preferred Location <span className="text-red-500">*</span></FormLabel>
-																	<Select onValueChange={field.onChange} defaultValue={field.value}>
-																		<FormControl>
-																			<SelectTrigger>
-																				<SelectValue placeholder="Select a house location" />
-																			</SelectTrigger>
-																		</FormControl>
-																		<SelectContent>
-																			<SelectItem value="sf-nob-hill">San Francisco - Nob Hill</SelectItem>
-																			<SelectItem value="sf-soma">San Francisco - SoMa</SelectItem>
-																		</SelectContent>
-																	</Select>
-																</FormItem>
-															)}
-														/>
-
-														<FormField
-															control={form.control}
-															name="roomType"
-															render={({ field }) => (
-																<FormItem className="space-y-2">
-																	<FormLabel>Room Preference <span className="text-red-500">*</span></FormLabel>
-																	<Select onValueChange={field.onChange} defaultValue={field.value}>
-																		<FormControl>
-																			<SelectTrigger>
-																				<SelectValue placeholder="Select a room type" />
-																			</SelectTrigger>
-																		</FormControl>
-																		<SelectContent>
-																			<SelectItem value="private">Private Room</SelectItem>
-																			<SelectItem value="shared">Shared Room (2 people)</SelectItem>
-																			<SelectItem value="any">No Preference</SelectItem>
-																		</SelectContent>
-																	</Select>
-																</FormItem>
-															)}
-														/>
-
-														<FormField
-															control={form.control}
-															name="moveInDate"
-															render={({ field }) => (
-																<FormItem className="space-y-2">
-																	<FormLabel>Desired Move-In Date <span className="text-red-500">*</span></FormLabel>
-																	<FormControl>
-																		<Input type="date" {...field} />
-																	</FormControl>
-																</FormItem>
-															)}
-														/>
-
-														<FormField
-															control={form.control}
-															name="stayDuration"
-															render={({ field }) => (
-																<FormItem className="space-y-2">
-																	<FormLabel>Expected Length of Stay <span className="text-red-500">*</span></FormLabel>
-																	<Select onValueChange={field.onChange} defaultValue={field.value}>
-																		<FormControl>
-																			<SelectTrigger>
-																				<SelectValue placeholder="Select duration" />
-																			</SelectTrigger>
-																		</FormControl>
-																		<SelectContent>
-																			<SelectItem value="1-month">1 month</SelectItem>
-																			<SelectItem value="3-months">3 months</SelectItem>
-																			<SelectItem value="6-months">6 months</SelectItem>
-																			<SelectItem value="12-months">12 months or longer</SelectItem>
-																		</SelectContent>
-																	</Select>
 																</FormItem>
 															)}
 														/>
@@ -333,7 +410,133 @@ export default function ApplyPage() {
 												</div>
 
 												<div className="flex justify-end">
-													<Button type="submit" className="flex items-center">
+													<Button type="button" onClick={goToNextStep} className="flex items-center">
+														Continue to Preferences
+														<ArrowRight className="ml-2 h-4 w-4" />
+													</Button>
+												</div>
+											</TabsContent>
+
+											<TabsContent value="preferences" className="p-6 space-y-6">
+												<div>
+													<div className="flex items-center mb-6">
+														<Button variant="ghost" size="sm" className="mr-2" type="button" onClick={goToPreviousStep}>
+															<ChevronLeft className="h-4 w-4 mr-1" />
+															Back
+														</Button>
+														<h2 className="text-2xl font-bold">Preferences</h2>
+													</div>
+
+													<div className="space-y-4">
+														<div className="space-y-2">
+															<FormField
+																control={form.control}
+																name="preferences.location"
+																render={({ field }) => (
+																	<FormItem className="space-y-2">
+																		<FormLabel>Preferred Location <span className="text-red-500">*</span></FormLabel>
+																		<FormControl>
+																			<Select onValueChange={field.onChange} defaultValue={field.value}>
+																				<FormControl>
+																					<SelectTrigger>
+																						<SelectValue placeholder="Select a house location" />
+																					</SelectTrigger>
+																				</FormControl>
+																				<SelectContent>
+																					<SelectItem value="sf-nob-hill">San Francisco - Nob Hill</SelectItem>
+																					<SelectItem value="sf-soma">San Francisco - SoMa</SelectItem>
+																				</SelectContent>
+																			</Select>
+																		</FormControl>
+																	</FormItem>
+																)}
+															/>
+														</div>
+
+														<FormField
+															control={form.control}
+															name="preferences.roomType"
+															render={({ field }) => (
+																<FormItem className="space-y-2">
+																	<FormLabel>Room Preference <span className="text-red-500">*</span></FormLabel>
+																	<FormControl>
+																		<Select onValueChange={field.onChange} defaultValue={field.value}>
+																			<FormControl>
+																				<SelectTrigger>
+																					<SelectValue placeholder="Select a room type" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				<SelectItem value="private">Private Room</SelectItem>
+																				<SelectItem value="shared">Shared Room (2 people)</SelectItem>
+																				<SelectItem value="any">No Preference</SelectItem>
+																			</SelectContent>
+																		</Select>
+																	</FormControl>
+																</FormItem>
+															)}
+														/>
+
+														<FormField
+															control={form.control}
+															name="preferences.moveInDate"
+															render={({ field }) => (
+																<FormItem className="space-y-2">
+																	<FormLabel>Desired Move-In Date <span className="text-red-500">*</span></FormLabel>
+																	<FormControl>
+																		<Popover>
+																			<PopoverTrigger>
+																				<FormControl>
+																					<Input
+																						placeholder="Select date"
+																						value={field.value ? format(field.value, 'PP') : ''}
+																						readOnly
+																					/>
+																				</FormControl>
+																			</PopoverTrigger>
+																			<PopoverContent className="w-auto p-0">
+																				<Calendar
+																					mode="single"
+																					selected={field.value}
+																					onSelect={field.onChange}
+																					initialFocus
+																				/>
+																			</PopoverContent>
+																		</Popover>
+																	</FormControl>
+																</FormItem>
+															)}
+														/>
+
+														<FormField
+															control={form.control}
+															name="preferences.duration"
+															render={({ field }) => (
+																<FormItem className="space-y-2">
+																	<FormLabel>Expected Length of Stay <span className="text-red-500">*</span></FormLabel>
+																	<FormControl>
+																		<Select onValueChange={field.onChange} defaultValue={field.value}>
+																			<FormControl>
+																				<SelectTrigger>
+																					<SelectValue placeholder="Select duration" />
+																				</SelectTrigger>
+																			</FormControl>
+																			<SelectContent>
+																				<SelectItem value="1-month">1 month</SelectItem>
+																				<SelectItem value="3-months">3 months</SelectItem>
+																				<SelectItem value="6-months">6 months</SelectItem>
+																				<SelectItem value="12-months">12 months or longer</SelectItem>
+																			</SelectContent>
+																		</Select>
+																	</FormControl>
+																</FormItem>
+															)}
+														/>
+													</div>
+												</div>
+
+												<div className="flex justify-end">
+													<Button type="button" onClick={goToNextStep} className="flex items-center">
 														Continue to Background
 														<ArrowRight className="ml-2 h-4 w-4" />
 													</Button>
@@ -343,7 +546,7 @@ export default function ApplyPage() {
 											<TabsContent value="background" className="p-6 space-y-6">
 												<div>
 													<div className="flex items-center mb-6">
-														<Button variant="ghost" size="sm" className="mr-2">
+														<Button variant="ghost" size="sm" className="mr-2" type="button" onClick={goToPreviousStep}>
 															<ChevronLeft className="h-4 w-4 mr-1" />
 															Back
 														</Button>
@@ -354,7 +557,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="role"
+																name="background.role"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>What best describes your current role? <span className="text-red-500">*</span></FormLabel>
@@ -383,7 +586,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="company"
+																name="background.company"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Current Company / Project <span className="text-red-500">*</span></FormLabel>
@@ -398,7 +601,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="linkedin"
+																name="background.linkedin"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>LinkedIn Profile</FormLabel>
@@ -413,7 +616,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="website"
+																name="background.website"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Personal Website / Portfolio</FormLabel>
@@ -428,7 +631,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="github"
+																name="background.github"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>GitHub / Twitter</FormLabel>
@@ -443,7 +646,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="workDescription"
+																name="background.workDescription"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Tell us a bit about what you're working on <span className="text-red-500">*</span></FormLabel>
@@ -462,7 +665,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="goals"
+																name="background.goals"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>What are you hoping to get out of living at Accelr8? <span className="text-red-500">*</span></FormLabel>
@@ -481,7 +684,7 @@ export default function ApplyPage() {
 												</div>
 
 												<div className="flex justify-end">
-													<Button className="flex items-center">
+													<Button type="button" onClick={goToNextStep} className="flex items-center">
 														Continue to Additional Info
 														<ArrowRight className="ml-2 h-4 w-4" />
 													</Button>
@@ -491,7 +694,7 @@ export default function ApplyPage() {
 											<TabsContent value="additional" className="p-6 space-y-6">
 												<div>
 													<div className="flex items-center mb-6">
-														<Button variant="ghost" size="sm" className="mr-2">
+														<Button variant="ghost" size="sm" className="mr-2" type="button" onClick={goToPreviousStep}>
 															<ChevronLeft className="h-4 w-4 mr-1" />
 															Back
 														</Button>
@@ -502,7 +705,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="howHeard"
+																name="additional.howHeard"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>How did you hear about Accelr8? <span className="text-red-500">*</span></FormLabel>
@@ -529,7 +732,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="referredBy"
+																name="additional.referredBy"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>If referred, who referred you?</FormLabel>
@@ -544,7 +747,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="knownResidents"
+																name="additional.knownResidents"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Do you know anyone currently living at Accelr8?</FormLabel>
@@ -559,7 +762,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="dietaryRestrictions"
+																name="additional.dietaryRestrictions"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Dietary Restrictions or Preferences</FormLabel>
@@ -578,7 +781,7 @@ export default function ApplyPage() {
 														<div className="space-y-2">
 															<FormField
 																control={form.control}
-																name="additionalInfo"
+																name="additional.additionalInfo"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
 																		<FormLabel>Anything else you'd like us to know?</FormLabel>
@@ -617,32 +820,11 @@ export default function ApplyPage() {
 																/>
 															</div>
 														</div>
-
-														<div className="flex items-start space-x-2">
-															<FormField
-																control={form.control}
-																name="notifications"
-																render={({ field }) => (
-																	<FormItem className="flex items-start space-x-2">
-																		<FormControl>
-																			<Checkbox
-																				id="notifications"
-																				checked={field.value}
-																				onCheckedChange={field.onChange}
-																			/>
-																		</FormControl>
-																		<FormLabel htmlFor="notifications" className="font-normal text-sm cursor-pointer">
-																			I would like to receive updates about events, openings, and news from Accelr8.
-																		</FormLabel>
-																	</FormItem>
-																)}
-															/>
-														</div>
 													</div>
 												</div>
 
 												<div className="flex justify-end">
-													<Button className="flex items-center">
+													<Button type="button" onClick={goToNextStep} className="flex items-center">
 														Review Application
 														<ArrowRight className="ml-2 h-4 w-4" />
 													</Button>
@@ -652,7 +834,7 @@ export default function ApplyPage() {
 											<TabsContent value="review" className="p-6 space-y-6">
 												<div>
 													<div className="flex items-center mb-6">
-														<Button variant="ghost" size="sm" className="mr-2">
+														<Button variant="ghost" size="sm" className="mr-2" type="button" onClick={goToPreviousStep}>
 															<ChevronLeft className="h-4 w-4 mr-1" />
 															Back
 														</Button>
@@ -741,10 +923,6 @@ export default function ApplyPage() {
 																	<p className="text-gray-400">Agreed to Terms:</p>
 																	<p>Yes</p>
 																</div>
-																<div>
-																	<p className="text-gray-400">Subscribe to Updates:</p>
-																	<p>Yes</p>
-																</div>
 															</div>
 															<Button variant="outline" size="sm" className="mt-2">
 																Edit
@@ -754,7 +932,7 @@ export default function ApplyPage() {
 												</div>
 
 												<div className="flex justify-end">
-													<Button className="flex items-center">
+													<Button type="submit" className="flex items-center">
 														Submit Application
 														<ArrowRight className="ml-2 h-4 w-4" />
 													</Button>
