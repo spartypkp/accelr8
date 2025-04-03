@@ -163,9 +163,9 @@ export default async function HousesPage() {
 									We're currently working on adding new house locations. Please check back soon or contact us for more information.
 								</p>
 								<Button asChild>
-									<Link href="/contact">
+									<a href="mailto:hello@accelr8.io">
 										Contact Us
-									</Link>
+									</a>
 								</Button>
 							</div>
 						)}
@@ -214,9 +214,9 @@ export default async function HousesPage() {
 								</Link>
 							</Button>
 							<Button asChild variant="outline" size="lg">
-								<Link href="/contact">
+								<a href="mailto:hello@accelr8.io">
 									Contact Us
-								</Link>
+								</a>
 							</Button>
 						</div>
 					</div>

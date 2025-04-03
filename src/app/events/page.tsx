@@ -313,9 +313,9 @@ export default function EventsPage() {
 								</Link>
 							</Button>
 							<Button asChild variant="outline" size="lg">
-								<Link href="/contact">
+								<a href="mailto:hello@accelr8.io">
 									Contact for Partnerships
-								</Link>
+								</a>
 							</Button>
 						</div>
 					</div>

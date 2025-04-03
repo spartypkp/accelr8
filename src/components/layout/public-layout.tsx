@@ -29,12 +29,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 	}, []);
 
 	const navItems = [
+		{ name: 'Home', href: '/' },
 		{ name: 'About', href: '/about' },
-		{ name: 'Houses', href: '/houses' },
 		{ name: 'Events', href: '/events' },
-		{ name: 'Blog', href: '/blog' },
-		{ name: 'Apply', href: '/apply' },
-		{ name: 'Contact', href: '/contact' },
+		{ name: 'Media', href: '/media' },
 	];
 
 	return (
@@ -57,22 +55,50 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 							</span>
 						</Link>
 
-						{/* Desktop Navigation */}
+						{/* Desktop Navigation - Split with Apply in the middle */}
 						<nav className="hidden md:flex items-center space-x-6">
-							{navItems.map((item) => (
-								<Link
-									key={item.name}
-									href={item.href}
-									className={cn(
-										"text-sm font-medium transition-colors hover:text-blue-400",
-										pathname === item.href
-											? "text-blue-500"
-											: "text-gray-300"
-									)}
-								>
-									{item.name}
+							{/* First two nav items */}
+							<div className="flex items-center space-x-6">
+								{navItems.slice(0, 2).map((item) => (
+									<Link
+										key={item.name}
+										href={item.href}
+										className={cn(
+											"text-sm font-medium transition-colors hover:text-blue-400",
+											pathname === item.href
+												? "text-blue-500"
+												: "text-gray-300"
+										)}
+									>
+										{item.name}
+									</Link>
+								))}
+							</div>
+
+							{/* Highlighted Apply Button */}
+							<Button asChild variant="outline" className="font-medium text-base px-6 border-2 border-blue-500 hover:bg-blue-500/20 hover:text-white">
+								<Link href="/apply">
+									Apply Now
 								</Link>
-							))}
+							</Button>
+
+							{/* Last two nav items */}
+							<div className="flex items-center space-x-6">
+								{navItems.slice(2, 4).map((item) => (
+									<Link
+										key={item.name}
+										href={item.href}
+										className={cn(
+											"text-sm font-medium transition-colors hover:text-blue-400",
+											pathname === item.href
+												? "text-blue-500"
+												: "text-gray-300"
+										)}
+									>
+										{item.name}
+									</Link>
+								))}
+							</div>
 						</nav>
 
 						{/* Auth or Dashboard buttons */}
@@ -82,14 +108,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 									<Link href="/dashboard">Dashboard</Link>
 								</Button>
 							) : (
-								<>
-									<Button asChild variant="ghost">
-										<Link href="/login">Login</Link>
-									</Button>
-									<Button asChild>
-										<Link href="/register">Join Now</Link>
-									</Button>
-								</>
+								<Button asChild variant="default" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+									<Link href="/login">Login</Link>
+								</Button>
 							)}
 						</div>
 
@@ -132,6 +153,13 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 												{item.name}
 											</Link>
 										))}
+										{/* Highlighted Apply Button for Mobile */}
+										<Link
+											href="/apply"
+											className="text-base font-bold text-blue-500 border-2 border-blue-500 rounded-md py-2 px-4 text-center hover:bg-blue-500/20"
+										>
+											Apply Now
+										</Link>
 									</nav>
 
 									<div className="mt-auto border-t pt-4 flex flex-col space-y-4">
@@ -140,14 +168,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 												<Link href="/dashboard">Dashboard</Link>
 											</Button>
 										) : (
-											<>
-												<Button asChild variant="outline">
-													<Link href="/login">Login</Link>
-												</Button>
-												<Button asChild>
-													<Link href="/register">Join Now</Link>
-												</Button>
-											</>
+											<Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+												<Link href="/login">Login</Link>
+											</Button>
 										)}
 									</div>
 								</div>
@@ -188,6 +211,14 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 										</Link>
 									</li>
 								))}
+								<li>
+									<Link
+										href="/apply"
+										className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
+									>
+										Apply Now
+									</Link>
+								</li>
 							</ul>
 						</div>
 

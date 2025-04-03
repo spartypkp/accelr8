@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { isAdminUser } from '../auth';
 import { useAuth } from './context';
 
 // Hook to check if user is authenticated
@@ -23,9 +24,8 @@ export function useRequireAdmin(redirectTo = '/dashboard') {
 	const { user, isLoading } = useAuth();
 	const router = useRouter();
 
-	// Note: This is a placeholder for the admin check logic
-	// In a real implementation, you would check a role or permission field
-	const isAdmin = user?.user_metadata?.role === 'admin';
+	// Use the isAdminUser utility function for consistent role checking
+	const isAdmin = isAdminUser(user);
 
 	useEffect(() => {
 		if (!isLoading && (!user || !isAdmin)) {

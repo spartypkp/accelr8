@@ -69,7 +69,17 @@ export async function requireAuth(redirectTo = '/login') {
 export async function requireRole(requiredRoles: UserRole[], redirectTo = '/dashboard') {
 	const user = await getCurrentUser();
 
-	if (!user || !user.role || !requiredRoles.includes(user.role as UserRole)) {
+	if (!user) {
+		redirect(redirectTo);
+	}
+
+	// Special case for admin roles
+	if (requiredRoles.includes('admin') && isAdminUser(user)) {
+		return user;
+	}
+
+	// Check regular roles
+	if (!user.role || !requiredRoles.includes(user.role as UserRole)) {
 		redirect(redirectTo);
 	}
 
@@ -210,4 +220,21 @@ export async function updateUserProfile(userId: string, profileData: any) {
 	}
 
 	return data?.[0];
+}
+
+/**
+ * Check if a user has admin privileges (admin or super_admin)
+ */
+export function isAdminUser(user: any): boolean {
+	// Check role in user_metadata (from auth context)
+	if (user?.user_metadata?.role === 'admin' || user?.user_metadata?.role === 'super_admin') {
+		return true;
+	}
+
+	// Check role directly (from user object)
+	if (user?.role === 'admin' || user?.role === 'super_admin') {
+		return true;
+	}
+
+	return false;
 } 

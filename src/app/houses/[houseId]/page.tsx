@@ -422,16 +422,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 											<ArrowRight className="ml-2 h-4 w-4" />
 										</Link>
 									</Button>
-									<Button asChild variant="outline" className="w-full">
-										<Link href="/contact">
-											Schedule a Tour
-										</Link>
-									</Button>
-									<Button asChild variant="ghost" className="w-full">
-										<Link href="/contact">
-											Ask a Question
-										</Link>
-									</Button>
+
 								</div>
 
 								<div className="mt-6 pt-6 border-t border-gray-800">
@@ -500,9 +491,9 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 
 					<div className="text-center mt-10">
 						<Button asChild variant="outline">
-							<Link href="/contact">
+							<a href="mailto:hello@accelr8.io">
 								Ask More Questions
-							</Link>
+							</a>
 						</Button>
 					</div>
 				</div>
@@ -526,9 +517,9 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 								</Link>
 							</Button>
 							<Button asChild variant="outline" size="lg">
-								<Link href="/contact">
+								<a href="mailto:hello@accelr8.io">
 									Contact Us
-								</Link>
+								</a>
 							</Button>
 						</div>
 					</div>

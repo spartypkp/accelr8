@@ -32,6 +32,25 @@ export function AuthProvider({ children }: { children: React.ReactNode; }) {
 			if (session) {
 				setSession(session);
 				setUser(session.user);
+
+				// Fetch user role from accelr8_users table
+				const { data: userProfile } = await supabase
+					.from('accelr8_users')
+					.select('role')
+					.eq('id', session.user.id)
+					.single();
+
+				// Update user with role from database
+				if (userProfile?.role) {
+					const updatedUser = {
+						...session.user,
+						user_metadata: {
+							...session.user.user_metadata,
+							role: userProfile.role
+						}
+					};
+					setUser(updatedUser);
+				}
 			}
 
 			setIsLoading(false);
@@ -40,9 +59,34 @@ export function AuthProvider({ children }: { children: React.ReactNode; }) {
 		getSession();
 
 		const { data: { subscription } } = supabase.auth.onAuthStateChange(
-			(_event, session) => {
+			async (_event, session) => {
 				setSession(session);
-				setUser(session?.user ?? null);
+
+				if (session?.user) {
+					// Fetch user role from accelr8_users table on auth changes
+					const { data: userProfile } = await supabase
+						.from('accelr8_users')
+						.select('role')
+						.eq('id', session.user.id)
+						.single();
+
+					// Update user with role from database
+					if (userProfile?.role) {
+						const updatedUser = {
+							...session.user,
+							user_metadata: {
+								...session.user.user_metadata,
+								role: userProfile.role
+							}
+						};
+						setUser(updatedUser);
+					} else {
+						setUser(session.user);
+					}
+				} else {
+					setUser(null);
+				}
+
 				setIsLoading(false);
 			}
 		);
@@ -53,10 +97,32 @@ export function AuthProvider({ children }: { children: React.ReactNode; }) {
 	}, []);
 
 	const signIn = async (email: string, password: string) => {
-		const { error } = await supabase.auth.signInWithPassword({
+		const { data, error } = await supabase.auth.signInWithPassword({
 			email,
 			password,
 		});
+
+		if (!error && data.user) {
+			// Fetch user role from accelr8_users table
+			const { data: userProfile } = await supabase
+				.from('accelr8_users')
+				.select('role')
+				.eq('id', data.user.id)
+				.single();
+
+			// Update user with role from database
+			if (userProfile?.role) {
+				const updatedUser = {
+					...data.user,
+					user_metadata: {
+						...data.user.user_metadata,
+						role: userProfile.role
+					}
+				};
+				setUser(updatedUser);
+			}
+		}
+
 		return { error };
 	};
 

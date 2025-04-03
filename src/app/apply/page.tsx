@@ -1038,9 +1038,9 @@ function ApplicationPageContent() {
 												</Link>
 											</Button>
 											<Button variant="outline" size="sm" asChild className="w-full">
-												<Link href="/contact">
+												<a href="mailto:applications@accelr8.io">
 													Contact Us
-												</Link>
+												</a>
 											</Button>
 										</div>
 									</CardContent>

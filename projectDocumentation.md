@@ -1,5 +1,58 @@
 # Accelr8 Website and Dashboard System
 
+## About Accelr8: Our Story and Vision
+
+### Genesis
+Accelr8 began when Daniel and Pat met at a Web3 co-living experiment in the Sierra Nevada mountains hosted by Cabin DAO. Surrounded by ambitious builders working on cutting-edge technologies, they witnessed firsthand how magical the right community can be. What started as late-night conversations about the future of work and innovation evolved into a vision: create a space in San Francisco where the world's brightest minds could live, build, and grow together.
+
+This wasn't just about shared housing—it was about creating an environment where serendipitous connections lead to outsized outcomes, where breakfast conversations spark midnight breakthroughs, and where the next generation of world-changing companies could begin.
+
+### Evolution
+Over time, Daniel and Pat built deep networks across technology and Web3. They organized events, hosted dinner gatherings, and connected builders who were working on similar problems. They recognized a pattern: when the right people come together in the right environment with the right incentives, innovation happens at an accelerated pace. Not through formal structures or rigid programs, but through organic connection and authentic collaboration.
+
+Every event strengthened their conviction that community-driven innovation was the future—and that San Francisco needed a physical hub where this approach could flourish full-time.
+
+### Accelr8 Today
+Today, Accelr8 is bringing these learnings and vision to life through our hacker house in San Francisco. We've created a space designed specifically for AI and Web3 founders at the pre-seed and seed stages—those building the future right at technology's frontier.
+
+Our 15-bedroom house in Nob Hill has become home to engineers, designers, and founders from diverse backgrounds but with a common trait: they're all exceptionally talented builders committed to creating something meaningful.
+
+Through weekly house events, monthly hackathons, demo days, and daily interactions, our community is accelerating innovation in ways that traditional accelerators and incubators simply cannot replicate.
+
+#### Impact So Far
+- **40+ Founders** building next-gen startups in AI, Web3, and beyond
+- **15+ Startups Launched** from ideation to successful funding rounds
+- **100+ Community Events** including hackathons, workshops, pitch days, and social gatherings
+
+### Future Vision
+We believe we're just at the beginning of what's possible when you bring together the right people in the right environment. Our vision for Accelr8 extends far beyond a single house in San Francisco—we're building a globally connected network of innovation hubs that will reshape how talented people live, work, and create together.
+
+#### Phase I: San Francisco Network
+Our immediate goal is to create a network of innovation hubs across San Francisco, forming a powerful ecosystem of talent, resources, and opportunities for founders. By creating multiple nodes across San Francisco, we'll build critical mass for innovation, allowing members to tap into different sub-communities while maintaining the cohesive Accelr8 experience.
+
+**Why a network matters:**
+- **Talent density**: Multiple houses means more founders, engineers, and creators in proximity
+- **Specialization**: Houses can develop unique focuses (AI, Web3, Biotech) while remaining connected
+- **Local network effects**: Cross-house events, shared resources, and expanded opportunity networks
+
+#### Phase II: Global Innovation Network
+Our ultimate vision extends far beyond San Francisco. We're creating a global network of innovation hubs where the next generation of technology companies are born, all connected through a shared community of ambitious builders and entrepreneurs.
+
+**The Accelr8 Network Advantage:**
+- **Global Community**: Connect with brilliant minds worldwide
+- **Talent & Co-founders**: Find your perfect collaborator
+- **Remote Work**: Move between locations while staying connected
+- **Launch Support**: Resources to help you scale globally
+- **Prestige & Credibility**: Be part of a recognized network
+- **Global Events**: Participate in cross-location collaborations
+
+When you join Accelr8, you're not just renting a room—you're becoming part of a global network designed to accelerate your journey as a founder. Whether you need a co-founder, technical talent, investment opportunities, or simply a supportive community that understands the challenges of building, the Accelr8 network will be there to support you at every step.
+
+### Our Guiding Principles
+- **Community First**: We believe that meaningful connections between founders create exponential value. Our community is our greatest asset.
+- **High Talent Density**: We curate our community to bring together exceptional people with complementary skills and shared ambition.
+- **Innovation Through Interaction**: We foster an environment where serendipitous collisions of ideas and perspectives lead to breakthrough innovations.
+
 ## Project Context
 
 ### What We're Building
@@ -373,7 +426,7 @@ async function getHouseWithResidents(houseId: string) {
    - Timeline for selection process
    - FAQs about application process
 
-7. **Blog/Resources**
+7. **Media**
    - Founder stories
    - Startup resources
    - Community highlights
@@ -498,8 +551,7 @@ For managing the entire Accelr8 operation across all houses:
 /houses/[houseId]                  # Public house page
 /events                            # Organization events
 /apply                             # Application page
-/blog                              # Blog/resources
-/contact                           # Contact page
+/media                             # Media content and resources
 
 # Auth routes
 /login                             # Login page
