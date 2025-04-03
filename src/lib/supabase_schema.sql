@@ -121,6 +121,19 @@ CREATE TABLE maintenance_requests (
   actual_completion TIMESTAMPTZ,
   cost DECIMAL(10,2),
   resolution_notes TEXT,
+  location TEXT, -- Area in the house (kitchen, bathroom, etc.)
+  room_details TEXT, -- Specific room identifier or details
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Comments on maintenance requests
+CREATE TABLE maintenance_comments (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  maintenance_request_id UUID REFERENCES maintenance_requests(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES accelr8_users(id) ON DELETE SET NULL,
+  comment TEXT NOT NULL,
+  is_internal BOOLEAN DEFAULT FALSE, -- For admin-only visibility
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -266,10 +279,15 @@ CREATE TRIGGER update_maintenance_requests_updated_at
 BEFORE UPDATE ON maintenance_requests
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_maintenance_comments_updated_at
+BEFORE UPDATE ON maintenance_comments
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_resource_bookings_updated_at
 BEFORE UPDATE ON resource_bookings
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- Maintenance tables
 -- Event tables
 CREATE TRIGGER update_internal_events_updated_at
 BEFORE UPDATE ON internal_events

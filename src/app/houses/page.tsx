@@ -1,7 +1,7 @@
 import { PublicLayout } from "@/components/layout/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getHouses } from "@/lib/api";
+import { getHouses, type SanityHouse } from "@/lib/api";
 import { urlFor } from "@/lib/sanity";
 import {
 	ArrowRight,
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HousesPage() {
-	const houses = await getHouses();
+	const houses: SanityHouse[] = await getHouses();
 
 	return (
 		<PublicLayout>

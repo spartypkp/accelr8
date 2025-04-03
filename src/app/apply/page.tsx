@@ -154,7 +154,7 @@ export default function ApplicationPage() {
 			// Prepare application data
 			const applicationData: ApplicationData = {
 				user_id: user?.id,
-				sanity_house_id: houseId,
+				house_id: houseId,
 				preferred_move_in: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
 				preferred_duration: values.preferences.duration,
 				status: 'submitted',

@@ -9,7 +9,8 @@ const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2023-03-25';
 export const sanityClient = createClient({
 	projectId,
 	dataset,
-	apiVersion
+	apiVersion,
+	useCdn: process.env.NODE_ENV === 'production' // Use CDN in production, live API in development
 });
 
 // For image URL generation

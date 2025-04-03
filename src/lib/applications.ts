@@ -2,7 +2,7 @@ import { createClient } from './supabase/client';
 
 export type ApplicationData = {
 	user_id?: string; // May be null for non-authenticated users
-	sanity_house_id: string;
+	house_id: string; // Now using a direct house ID instead of a Sanity reference
 	preferred_move_in: string;
 	preferred_duration: string;
 	status: 'draft' | 'submitted' | 'reviewing' | 'interview' | 'approved' | 'rejected' | 'waitlisted';
@@ -58,24 +58,18 @@ export async function submitApplication(applicationData: ApplicationData) {
 }
 
 /**
- * Get Sanity house ID from slug
+ * Get house ID from slug - now using a hardcoded mapping without Sanity
  */
 export async function getHouseIdFromSlug(slug: string) {
-	const supabase = createClient();
+	// Map slug to house ID using a hardcoded mapping
+	const houseMapping: Record<string, string> = {
+		'sf-nob-hill': 'house-sf-1',
+		'sf-mission': 'house-sf-2',
+		'nyc-brooklyn': 'house-nyc-1',
+		'la-venice': 'house-la-1',
+	};
 
-	const { data, error } = await supabase
-		.from('houses_lookup')
-		.select('sanity_id')
-		.eq('slug', slug)
-		.single();
-
-	if (error) {
-		console.error('Error getting house ID:', error);
-		// Return default ID if lookup fails
-		return 'default-house-id';
-	}
-
-	return data?.sanity_id;
+	return houseMapping[slug] || 'default-house-id';
 }
 
 /**

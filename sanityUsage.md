@@ -26,7 +26,16 @@ Our Sanity CMS includes the following primary content types:
 - **Testimonial** - User feedback and quotes
 - **FAQ** - Frequently asked questions
 - **Resource** - Bookable spaces and equipment
-- **MainPage** - Page builder for website sections
+- **MainPage** - Page builder for specific overview pages (houses, events, blog)
+
+### Content Management Strategy
+
+We use a hybrid approach for content management:
+
+- **Sanity-managed Pages:** Houses, Events, and Blog (highly dynamic content)
+- **Next.js-managed Pages:** Homepage, About, Apply, and Contact (more static content)
+
+This approach allows us to focus Sanity CMS on the most content-heavy and frequently updated pages while keeping simpler pages directly in the codebase for ease of development.
 
 ## Setting Up Sanity Client in Next.js
 
@@ -156,39 +165,54 @@ const upcomingEvents = await client.fetch(`
 
 ### Fetching Main Pages
 
+Our MainPage schema now supports specific page types (housesOverview, eventsOverview, blogOverview) with structured sections:
+
 ```javascript
-// Get a specific page by slug
-const page = await client.fetch(`
-  *[_type == "mainPage" && slug.current == $slug][0] {
+// Get a specific overview page by pageType
+const housesOverviewPage = await client.fetch(`
+  *[_type == "mainPage" && pageType == "housesOverview"][0] {
     _id,
     title,
-    content[] {
-      _type == 'hero' => {
+    slug,
+    hero {
+      heading,
+      subheading,
+      backgroundImage,
+      ctaButton
+    },
+    contentSections[] {
+      _type == 'featuredHousesSection' => {
         _type,
         heading,
         subheading,
-        image
+        houses[]-> {
+          _id,
+          name,
+          slug,
+          location,
+          mainImage
+        }
       },
       _type == 'textSection' => {
         _type,
         heading,
-        text
+        content
       },
-      _type == 'imageTextSection' => {
+      _type == 'statsSection' => {
         _type,
         heading,
-        text,
-        image,
-        imagePosition
+        introduction,
+        stats
       },
       _type == 'testimonialSection' => {
         _type,
         heading,
-        "testimonials": testimonials[]->
+        testimonials[]->
       }
-    }
+    },
+    seo
   }
-`, { slug: "home" })
+`)
 ```
 
 ## Rendering Content
@@ -276,41 +300,31 @@ import { urlFor } from '@/lib/sanity'
 />
 ```
 
-### Handling Code Blocks
+### Rendering Next.js Managed Pages
 
-For code blocks in blog posts, create a dedicated component:
+For pages managed directly in Next.js (Homepage, About, Apply, Contact), we use standard React components without Sanity data fetching:
 
 ```jsx
-import React from 'react'
-import Prism from 'prismjs'
-import 'prismjs/themes/prism-tomorrow.css'
-import 'prismjs/components/prism-javascript'
-import 'prismjs/components/prism-typescript'
-import 'prismjs/components/prism-jsx'
-import 'prismjs/components/prism-tsx'
-import 'prismjs/components/prism-css'
-import 'prismjs/components/prism-python'
+// Example for the About page (src/app/about/page.tsx)
+import { Metadata } from 'next'
+import { PublicLayout } from '@/components/layout/public-layout'
 
-// Load additional languages as needed
+export const metadata: Metadata = {
+  title: 'About Accelr8 | Our Mission and Team',
+  description: 'Learn about Accelr8\'s mission, values, and the team behind our hacker houses.'
+}
 
-export const CodeBlock = ({ code, language, filename }) => {
-  React.useEffect(() => {
-    Prism.highlightAll()
-  }, [code])
-
+export default function AboutPage() {
   return (
-    <div className="code-block my-6 rounded-lg overflow-hidden">
-      {filename && (
-        <div className="bg-gray-800 text-gray-300 px-4 py-2 text-sm font-mono">
-          {filename}
-        </div>
-      )}
-      <pre className="p-4 overflow-x-auto">
-        <code className={`language-${language || 'javascript'}`}>
-          {code}
-        </code>
-      </pre>
-    </div>
+    <PublicLayout>
+      {/* Page content defined directly in the component */}
+      <section className="...">
+        <h1>About Accelr8</h1>
+        <p>...</p>
+      </section>
+      
+      {/* Additional sections */}
+    </PublicLayout>
   )
 }
 ```
@@ -394,214 +408,21 @@ export async function getPagedBlogPosts(page = 1) {
 }
 ```
 
-## Real-time Updates with GROQ Subscriptions
-
-For features that need real-time updates:
-
-```javascript
-import { useEffect, useState } from 'react'
-import { client } from '@/lib/sanity'
-
-export function useEvents(houseId) {
-  const [events, setEvents] = useState([])
-
-  useEffect(() => {
-    const query = `*[_type == "event" && house._ref == $houseId]`
-    const params = { houseId }
-
-    // Initial fetch
-    client.fetch(query, params).then(setEvents)
-
-    // Set up subscription for real-time updates
-    const subscription = client.listen(query, params).subscribe(update => {
-      const wasCreated = update.mutations.some(
-        m => m.create && m.document._id === update.documentId
-      )
-      const wasDeleted = update.mutations.some(
-        m => m.delete && m.documentId === update.documentId
-      )
-
-      if (wasCreated) {
-        setEvents(prev => [...prev, update.result])
-      } else if (wasDeleted) {
-        setEvents(prev => prev.filter(event => event._id !== update.documentId))
-      } else {
-        // Document was updated
-        setEvents(prev =>
-          prev.map(event =>
-            event._id === update.documentId ? update.result : event
-          )
-        )
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [houseId])
-
-  return events
-}
-```
-
-## Preview Mode
-
-Set up preview mode to allow viewing draft content:
-
-```javascript
-// pages/api/preview.js
-export default function preview(req, res) {
-  if (!req.query.secret || req.query.secret !== process.env.SANITY_PREVIEW_SECRET) {
-    return res.status(401).json({ message: 'Invalid token' })
-  }
-
-  res.setPreviewData({})
-
-  // Redirect to the path from the fetched post
-  // We don't redirect to req.query.slug as that might lead to open redirect vulnerabilities
-  res.writeHead(307, { Location: req.query.slug })
-  res.end()
-}
-
-// In your getStaticProps functions
-export async function getStaticProps({ params, preview = false }) {
-  const query = `*[_type == "blogPost" && slug.current == $slug] {
-    // fields
-  }`
-  
-  // If preview mode is active, query both draft and published content
-  const queryParams = preview
-    ? { slug: params.slug, draft: `drafts.`}
-    : { slug: params.slug }
-  
-  const post = await client.fetch(
-    preview
-      ? `*[_type == "blogPost" && (slug.current == $slug || slug.current == $draft + $slug)][0]`
-      : `*[_type == "blogPost" && slug.current == $slug][0]`,
-    queryParams
-  )
-
-  return {
-    props: {
-      post,
-      preview,
-    },
-    revalidate: 60, // Revalidate every 60 seconds
-  }
-}
-```
-
-## Generating Static Pages
-
-For static site generation with dynamic routes:
-
-```javascript
-// In pages/blog/[slug].js
-export async function getStaticPaths() {
-  const paths = await client.fetch(
-    `*[_type == "blogPost" && defined(slug.current)][].slug.current`
-  )
-
-  return {
-    paths: paths.map(slug => ({ params: { slug } })),
-    fallback: 'blocking',
-  }
-}
-
-export async function getStaticProps({ params }) {
-  const post = await client.fetch(
-    `*[_type == "blogPost" && slug.current == $slug][0] {
-      // fields
-    }`,
-    { slug: params.slug }
-  )
-
-  if (!post) {
-    return { notFound: true }
-  }
-
-  return {
-    props: { post },
-    revalidate: 60,
-  }
-}
-```
-
-## Common GROQ Patterns
-
-### Filtering
-
-```javascript
-// Posts from a specific category
-*[_type == "blogPost" && $categoryId in categories[]._ref]
-
-// Houses with a specific amenity
-*[_type == "house" && $amenityId in amenities[]._ref]
-
-// Content published after a specific date
-*[_type == "event" && publishedAt > $date]
-```
-
-### Sorting
-
-```javascript
-// Ascending sort by date
-*[_type == "event"] | order(dateTime asc)
-
-// Descending sort by title
-*[_type == "house"] | order(name desc)
-
-// Multiple sort criteria
-*[_type == "person"] | order(role asc, name asc)
-```
-
-### Projections (Selecting Fields)
-
-```javascript
-// Basic field selection
-*[_type == "house"] { _id, name, location }
-
-// Computed fields
-*[_type == "blogPost"] {
-  _id,
-  title,
-  "wordCount": length(pt::text(body)) / 5,
-  "readingTime": round(length(pt::text(body)) / 5 / 200)
-}
-
-// Conditionally include a field
-*[_type == "person"] {
-  _id,
-  name,
-  ...select(
-    role == "team" => { 
-      position, 
-      joinedAt
-    },
-    role == "resident" => { 
-      house->, 
-      skills 
-    },
-    {}
-  )
-}
-```
-
-### Using Parameters
-
-```javascript
-// Using parameters for query values
-const result = await client.fetch(
-  `*[_type == "blogPost" && _createdAt > $since] | order(publishedAt desc)`,
-  { since: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() }
-)
-```
-
 ## Best Practices
 
-### Querying Efficiency
+### Hybrid Content Management
 
-1. **Only request what you need**: Specify exactly which fields to fetch rather than using `*`
-2. **Use projections**: Transform data at query time to match your component needs
-3. **Batch related queries**: Use projection syntax to fetch multiple related datasets in one query
+1. **Clear Separation of Concerns**:
+   - Use Sanity for dynamic, frequently updated, and content-rich pages (houses, events, blog)
+   - Use Next.js for more static, structure-heavy pages (homepage, about, apply, contact)
+
+2. **Fallback Strategies**:
+   - Implement fallbacks in components that fetch Sanity data
+   - Use loading states for better UX during fetching
+
+3. **API Organization**:
+   - Create separate API functions for different content types
+   - Keep data transformation logic in the API layer, not the components
 
 ### Performance Optimization
 
@@ -620,51 +441,6 @@ try {
   console.error('Error fetching data from Sanity:', error)
   return null // Or appropriate fallback
 }
-```
-
-### TypeScript Integration
-
-Create types matching your Sanity schema:
-
-```typescript
-// types/sanity.ts
-export interface SanityImage {
-  _type: 'image'
-  asset: {
-    _ref: string
-    _type: 'reference'
-  }
-  hotspot?: {
-    x: number
-    y: number
-    height: number
-    width: number
-  }
-  alt?: string
-  caption?: string
-}
-
-export interface House {
-  _id: string
-  _type: 'house'
-  name: string
-  slug: { current: string }
-  location: {
-    address: string
-    city: string
-    state: string
-    zip: string
-    coordinates: {
-      lat: number
-      lng: number
-    }
-  }
-  description: any[] // Portable Text
-  mainImage: SanityImage
-  amenities: Amenity[]
-}
-
-// More interfaces for other types
 ```
 
 ## Conclusion

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
 		// Create application data object
 		const applicationData: ApplicationData = {
-			sanity_house_id,
+			house_id: sanity_house_id,
 			preferred_move_in: moveInDate,
 			preferred_duration: duration,
 			status: 'submitted',
