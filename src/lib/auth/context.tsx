@@ -2,12 +2,17 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { Permission, getPermissions } from './permissions';
 
 type AuthContextType = {
 	user: User | null;
 	session: Session | null;
 	isLoading: boolean;
+	// Add permissions functions
+	permissions: Permission[];
+	hasPermission: (permission: Permission) => boolean;
+	// Auth methods
 	signIn: (email: string, password: string) => Promise<{ error: any; }>;
 	signUp: (email: string, password: string) => Promise<{ error: any; }>;
 	signOut: () => Promise<void>;
@@ -21,6 +26,17 @@ export function AuthProvider({ children }: { children: React.ReactNode; }) {
 	const [session, setSession] = useState<Session | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const supabase = createClient();
+
+	// Get permissions for the current user
+	const permissions = useMemo<Permission[]>(() => {
+		if (!user?.user_metadata?.role) return [];
+		return getPermissions(user.user_metadata.role);
+	}, [user]);
+
+	// Check if user has a permission
+	const hasPermission = (permission: Permission): boolean => {
+		return permissions.includes(permission);
+	};
 
 	useEffect(() => {
 		const getSession = async () => {
@@ -149,6 +165,10 @@ export function AuthProvider({ children }: { children: React.ReactNode; }) {
 		user,
 		session,
 		isLoading,
+		// Permissions functions
+		permissions,
+		hasPermission,
+		// Auth methods
 		signIn,
 		signUp,
 		signOut,

@@ -2,7 +2,7 @@ import { PublicLayout } from "@/components/layout/public-layout";
 import { Button } from "@/components/ui/button";
 import { getHouses, type SanityHouse } from "@/lib/api";
 import { urlFor } from "@/lib/sanity";
-import { ArrowRight, Building, ChevronRight, DollarSign, Handshake, MapPin, Star, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Building, Calendar, CalendarDays, ChevronRight, DollarSign, Handshake, MapPin, Star, TrendingUp, Users } from "lucide-react";
 import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -53,7 +53,7 @@ export default async function HomePage() {
 							</Link>
 						</Button>
 						<Button asChild variant="outline" size="lg" className="px-8 py-7 text-xl">
-							<Link href="/about">
+							<Link href="/story">
 								Our Story
 							</Link>
 						</Button>
@@ -398,6 +398,97 @@ export default async function HomePage() {
 								<ArrowRight className="ml-2 h-5 w-5" />
 							</Link>
 						</Button>
+					</div>
+				</div>
+			</section>
+
+			{/* Community Events Section */}
+			<section className="py-32 bg-black overflow-hidden">
+				<div className="container mx-auto px-4">
+					<div className="text-center mb-20">
+						<h2 className="text-4xl md:text-5xl font-bold mb-6">
+							Community Events
+						</h2>
+						<p className="text-xl text-gray-400 max-w-2xl mx-auto">
+							Connect, learn, and grow with our workshops, hackathons, and networking opportunities
+						</p>
+					</div>
+
+					<div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+						<div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-blue-600 transition-colors">
+							<div className="h-48 bg-gray-800 relative">
+								<div className="absolute inset-0 flex items-center justify-center">
+									<Calendar className="h-12 w-12 text-gray-700" />
+								</div>
+							</div>
+							<div className="p-6">
+								<div className="flex justify-between items-start mb-3">
+									<h3 className="text-xl font-bold">Founder Dinner Series</h3>
+									<span className="text-xs px-2 py-1 bg-blue-900/30 text-blue-400 rounded">Networking</span>
+								</div>
+								<p className="text-gray-400 text-sm mb-4">Join us for our monthly dinner with founders and investors in the Bay Area tech ecosystem.</p>
+								<div className="space-y-2 mb-6">
+									<div className="flex items-center text-gray-400 text-sm">
+										<CalendarDays className="h-4 w-4 mr-2" />
+										<span>Monthly</span>
+									</div>
+									<div className="flex items-center text-gray-400 text-sm">
+										<MapPin className="h-4 w-4 mr-2" />
+										<span>San Francisco House</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-blue-600 transition-colors">
+							<div className="h-48 bg-gray-800 relative">
+								<div className="absolute inset-0 flex items-center justify-center">
+									<Calendar className="h-12 w-12 text-gray-700" />
+								</div>
+							</div>
+							<div className="p-6">
+								<div className="flex justify-between items-start mb-3">
+									<h3 className="text-xl font-bold">AI Hackathon Weekend</h3>
+									<span className="text-xs px-2 py-1 bg-blue-900/30 text-blue-400 rounded">Hackathon</span>
+								</div>
+								<p className="text-gray-400 text-sm mb-4">48-hour hackathon focused on building AI-powered applications with mentorship from industry experts.</p>
+								<div className="space-y-2 mb-6">
+									<div className="flex items-center text-gray-400 text-sm">
+										<CalendarDays className="h-4 w-4 mr-2" />
+										<span>Quarterly</span>
+									</div>
+									<div className="flex items-center text-gray-400 text-sm">
+										<MapPin className="h-4 w-4 mr-2" />
+										<span>All Houses</span>
+									</div>
+								</div>
+							</div>
+						</div>
+
+						<div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-blue-600 transition-colors">
+							<div className="h-48 bg-gray-800 relative">
+								<div className="absolute inset-0 flex items-center justify-center">
+									<Calendar className="h-12 w-12 text-gray-700" />
+								</div>
+							</div>
+							<div className="p-6">
+								<div className="flex justify-between items-start mb-3">
+									<h3 className="text-xl font-bold">Pitch Practice Workshop</h3>
+									<span className="text-xs px-2 py-1 bg-blue-900/30 text-blue-400 rounded">Workshop</span>
+								</div>
+								<p className="text-gray-400 text-sm mb-4">Practice your startup pitch and receive feedback from experienced founders and investors.</p>
+								<div className="space-y-2 mb-6">
+									<div className="flex items-center text-gray-400 text-sm">
+										<CalendarDays className="h-4 w-4 mr-2" />
+										<span>Bi-weekly</span>
+									</div>
+									<div className="flex items-center text-gray-400 text-sm">
+										<MapPin className="h-4 w-4 mr-2" />
+										<span>San Francisco House</span>
+									</div>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</section>

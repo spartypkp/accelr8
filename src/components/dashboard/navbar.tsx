@@ -9,7 +9,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth";
+import { signOut } from "@/lib/auth-utils";
 import { Bell, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { MobileSidebar } from "./mobile-sidebar";

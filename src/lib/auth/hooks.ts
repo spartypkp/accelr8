@@ -1,9 +1,11 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-import { isAdminUser } from '../auth';
+import { useEffect, useMemo } from 'react';
+import { isAdminUser } from '../auth-utils';
 import { useAuth } from './context';
+import { Permission, can } from './permissions';
+import { Resource } from './types';
 
 // Hook to check if user is authenticated
 export function useRequireAuth(redirectTo = '/login') {
@@ -56,4 +58,50 @@ export function useAuthRedirect(onAuthenticatedPath = '/dashboard') {
 	}, [user, isLoading, router, pathname, onAuthenticatedPath]);
 
 	return { user, isLoading };
+}
+
+/**
+ * Hook to check permission for a specific action with resource
+ * For simple permission checks without resources, use context.hasPermission
+ * 
+ * Usage:
+ * const canEditHouse = usePermission('manage_house', { id: 'house-123', type: 'house' });
+ */
+export function usePermission(permission: Permission, resource?: Resource): boolean {
+	const { user, hasPermission } = useAuth();
+
+	// If no resource, use the simpler hasPermission
+	if (!resource) {
+		return hasPermission(permission);
+	}
+
+	// Convert Supabase user to UserProfile format for resource checks
+	const userProfile = useMemo(() => {
+		if (!user) return null;
+
+		return {
+			id: user.id,
+			email: user.email || '',
+			name: user.user_metadata?.name || '',
+			role: (user.user_metadata?.role || 'resident') as any,
+			profile: {
+				image: {
+					url: user.user_metadata?.avatar_url || '',
+				}
+			}
+		};
+	}, [user]);
+
+	// Check permission using can helper
+	return useMemo(() => {
+		return can(userProfile, permission, resource);
+	}, [userProfile, permission, resource]);
+}
+
+/**
+ * Hook to get all permissions for the current user
+ */
+export function useUserPermissions(): Permission[] {
+	const { permissions } = useAuth();
+	return permissions;
 } 

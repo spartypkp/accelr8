@@ -1,5 +1,6 @@
 "use client";
 
+import RouteGuard from "@/components/auth/route-guard";
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,15 @@ import { ArrowRight, PieChart, Settings } from "lucide-react";
 import Link from "next/link";
 
 export default function AdminPage() {
+	return (
+		<RouteGuard requiredPermission="access_admin">
+			<AdminContent />
+		</RouteGuard>
+	);
+}
+
+// Separate the authenticated content
+function AdminContent() {
 	// Mock data for houses - would come from database in production
 	const houses = [
 		{ id: "sf-nob-hill", name: "San Francisco - Nob Hill", residents: 18, occupancy: 90, alert: false },

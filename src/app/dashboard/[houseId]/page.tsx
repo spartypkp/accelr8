@@ -1,13 +1,12 @@
+import AuthGuard from "@/components/auth/auth-guard";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getHouse } from "@/lib/api";
-import { getCurrentUser } from "@/lib/auth";
 import {
 	AlertCircle,
 	Calendar,
-	CheckCircle,
 	Clock, InfoIcon,
 	Users,
 	Wrench
@@ -37,22 +36,40 @@ export default async function HouseDashboardPage({
 }: {
 	params: { houseId: string; };
 }) {
-	const user = await getCurrentUser();
 	const house = await getHouse(params.houseId);
 
 	if (!house) {
 		notFound();
 	}
 
-	// Get announcements from Supabase
+	return (
+		<AuthGuard
+			requiredPermission="view_house"
+			resource={{ id: params.houseId, type: "house" }}
+		>
+			<HouseDashboardContent houseId={params.houseId} house={house} />
+		</AuthGuard>
+	);
+}
+
+// Separate the authenticated content to a new component
+async function HouseDashboardContent({
+	houseId,
+	house
+}: {
+	houseId: string;
+	house: any;
+}) {
+	// Get Supabase client
 	const supabase = await import("@/lib/supabase/client").then(
 		(mod) => mod.createClient()
 	);
 
+	// Get announcements from Supabase
 	const { data: announcements } = await supabase
 		.from("announcements")
 		.select("*")
-		.eq("sanity_house_id", params.houseId)
+		.eq("sanity_house_id", houseId)
 		.order("created_at", { ascending: false })
 		.limit(3);
 
@@ -60,16 +77,20 @@ export default async function HouseDashboardPage({
 	const { data: events } = await supabase
 		.from("internal_events")
 		.select("*")
-		.eq("sanity_house_id", params.houseId)
+		.eq("sanity_house_id", houseId)
 		.gte("start_time", new Date().toISOString())
 		.order("start_time", { ascending: true })
 		.limit(3);
 
-	// Get maintenance requests
+	// Get maintenance requests - we need the user from requirePermission for this
+	// so we're using it directly in the component
+	const { requirePermission } = await import('@/components/auth/auth-guard');
+	const user = await requirePermission('view_house', { id: houseId, type: 'house' });
+
 	const { data: maintenanceRequests } = await supabase
 		.from("maintenance_requests")
 		.select("*")
-		.eq("sanity_house_id", params.houseId)
+		.eq("sanity_house_id", houseId)
 		.eq("requested_by", user?.id)
 		.neq("status", "completed")
 		.order("created_at", { ascending: false })
@@ -86,7 +107,7 @@ export default async function HouseDashboardPage({
 				</div>
 				<div className="flex gap-2">
 					<Button asChild>
-						<Link href={`/dashboard/${params.houseId}/community`}>
+						<Link href={`/dashboard/${houseId}/community`}>
 							<Users className="mr-2 h-4 w-4" />
 							Connect with Residents
 						</Link>
@@ -104,7 +125,7 @@ export default async function HouseDashboardPage({
 					</AlertDescription>
 					<div className="mt-2">
 						<Link
-							href={`/dashboard/${params.houseId}/announcements`}
+							href={`/dashboard/${houseId}/announcements`}
 							className="text-sm text-amber-600 font-medium hover:underline"
 						>
 							View all announcements
@@ -140,7 +161,7 @@ export default async function HouseDashboardPage({
 									</div>
 								))}
 								<Button variant="outline" size="sm" className="w-full" asChild>
-									<Link href={`/dashboard/${params.houseId}/events`}>
+									<Link href={`/dashboard/${houseId}/events`}>
 										View All Events
 									</Link>
 								</Button>
@@ -150,7 +171,7 @@ export default async function HouseDashboardPage({
 								<Calendar className="h-10 w-10 text-muted-foreground/60 mb-2" />
 								<p className="text-sm text-muted-foreground">No upcoming events</p>
 								<Button variant="outline" size="sm" className="mt-4" asChild>
-									<Link href={`/dashboard/${params.houseId}/events`}>
+									<Link href={`/dashboard/${houseId}/events`}>
 										View Events Calendar
 									</Link>
 								</Button>
@@ -173,12 +194,12 @@ export default async function HouseDashboardPage({
 								{maintenanceRequests.map((request) => (
 									<div key={request.id} className="flex items-start space-x-3">
 										<div className={`p-2 rounded-md ${request.status === 'open' ? 'bg-red-100' :
-												request.status === 'in_progress' ? 'bg-amber-100' :
-													'bg-slate-100'
+											request.status === 'in_progress' ? 'bg-amber-100' :
+												'bg-slate-100'
 											}`}>
 											<Wrench className={`h-4 w-4 ${request.status === 'open' ? 'text-red-500' :
-													request.status === 'in_progress' ? 'text-amber-500' :
-														'text-slate-500'
+												request.status === 'in_progress' ? 'text-amber-500' :
+													'text-slate-500'
 												}`} />
 										</div>
 										<div className="space-y-1">
@@ -200,7 +221,7 @@ export default async function HouseDashboardPage({
 									</div>
 								))}
 								<Button variant="outline" size="sm" className="w-full" asChild>
-									<Link href={`/dashboard/${params.houseId}/maintenance`}>
+									<Link href={`/dashboard/${houseId}/maintenance`}>
 										View All Requests
 									</Link>
 								</Button>
@@ -210,7 +231,7 @@ export default async function HouseDashboardPage({
 								<Wrench className="h-10 w-10 text-muted-foreground/60 mb-2" />
 								<p className="text-sm text-muted-foreground">No active maintenance requests</p>
 								<Button variant="outline" size="sm" className="mt-4" asChild>
-									<Link href={`/dashboard/${params.houseId}/maintenance/new`}>
+									<Link href={`/dashboard/${houseId}/maintenance/new`}>
 										Submit a Request
 									</Link>
 								</Button>
@@ -230,33 +251,21 @@ export default async function HouseDashboardPage({
 					<CardContent>
 						<div className="space-y-2">
 							<Button variant="outline" className="w-full justify-start" asChild>
-								<Link href={`/dashboard/${params.houseId}/resources`}>
+								<Link href={`/dashboard/${houseId}/resources`}>
 									<Clock className="mr-2 h-4 w-4" />
 									Book a Resource
 								</Link>
 							</Button>
 							<Button variant="outline" className="w-full justify-start" asChild>
-								<Link href={`/dashboard/${params.houseId}/maintenance/new`}>
+								<Link href={`/dashboard/${houseId}/maintenance/new`}>
 									<Wrench className="mr-2 h-4 w-4" />
 									Report an Issue
 								</Link>
 							</Button>
 							<Button variant="outline" className="w-full justify-start" asChild>
-								<Link href={`/dashboard/${params.houseId}/community`}>
+								<Link href={`/dashboard/${houseId}/community`}>
 									<Users className="mr-2 h-4 w-4" />
 									Resident Directory
-								</Link>
-							</Button>
-							<Button variant="outline" className="w-full justify-start" asChild>
-								<Link href={`/dashboard/${params.houseId}/billing`}>
-									<CheckCircle className="mr-2 h-4 w-4" />
-									Make a Payment
-								</Link>
-							</Button>
-							<Button variant="outline" className="w-full justify-start" asChild>
-								<Link href={`/dashboard/${params.houseId}/info`}>
-									<InfoIcon className="mr-2 h-4 w-4" />
-									House Information
 								</Link>
 							</Button>
 						</div>

@@ -1,7 +1,14 @@
+// DEPRECATED: This file is being replaced by the new middleware.ts in the project root
+// This file will be deleted after migration is complete
+
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
+// This function is no longer used and is left for reference
+// The new middleware.ts in the project root replaces this functionality
 export async function updateSession(request: NextRequest) {
+	console.warn("Warning: Using deprecated middleware. Use new middleware.ts instead.");
+
 	let supabaseResponse = NextResponse.next({
 		request,
 	});

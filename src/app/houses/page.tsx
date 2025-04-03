@@ -1,9 +1,13 @@
+'use client';
+
 import { PublicLayout } from "@/components/layout/public-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getHouses, type SanityHouse } from "@/lib/api";
 import { urlFor } from "@/lib/sanity";
 import {
+	AlertCircle,
 	ArrowRight,
 	Building,
 	Filter,
@@ -12,20 +16,27 @@ import {
 	Users,
 	Wifi
 } from "lucide-react";
-import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
-export const metadata: Metadata = {
-	title: "Our Houses | Accelr8",
-	description: "Explore our network of Accelr8 hacker houses designed for founders and innovators.",
-};
+function HousesContent() {
+	const searchParams = useSearchParams();
+	const status = searchParams.get('status');
+	const [houses, setHouses] = useState<SanityHouse[]>([]);
 
-export default async function HousesPage() {
-	const houses: SanityHouse[] = await getHouses();
+	useEffect(() => {
+		const fetchHouses = async () => {
+			const housesData = await getHouses();
+			setHouses(housesData);
+		};
+
+		fetchHouses();
+	}, []);
 
 	return (
-		<PublicLayout>
+		<>
 			{/* Hero Section */}
 			<section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
 				<div className="absolute inset-0 bg-gradient-to-b from-black via-gray-950 to-blue-950 z-0"></div>
@@ -81,6 +92,16 @@ export default async function HousesPage() {
 			{/* Houses Grid */}
 			<section className="py-20 bg-gray-950">
 				<div className="container mx-auto px-4">
+					{status === 'no_active_house' && (
+						<Alert variant="destructive" className="mb-8">
+							<AlertCircle className="h-4 w-4 mr-2" />
+							<AlertTitle>Not Assigned to a House</AlertTitle>
+							<AlertDescription>
+								You don't currently have an active residency in any Accelr8 house.
+								Please browse available houses below or contact support if you believe this is an error.
+							</AlertDescription>
+						</Alert>
+					)}
 					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 						{houses?.length > 0 ? (
 							houses.map((house) => (
@@ -222,6 +243,16 @@ export default async function HousesPage() {
 					</div>
 				</div>
 			</section>
+		</>
+	);
+}
+
+export default function HousesPage() {
+	return (
+		<PublicLayout>
+			<Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading houses...</div>}>
+				<HousesContent />
+			</Suspense>
 		</PublicLayout>
 	);
 }

@@ -29,9 +29,9 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 	}, []);
 
 	const navItems = [
-		{ name: 'Home', href: '/' },
-		{ name: 'About', href: '/about' },
-		{ name: 'Events', href: '/events' },
+		{ name: 'Houses', href: '/houses' },
+		{ name: 'Our Story', href: '/story' },
+		{ name: 'Services', href: '/services' },
 		{ name: 'Media', href: '/media' },
 	];
 
@@ -40,34 +40,34 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 			{/* Navigation */}
 			<header
 				className={cn(
-					"fixed top-0 w-full z-50 transition-all duration-300",
+					"fixed top-0 w-full z-50 transition-all duration-300 border-b border-blue-500/30 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-gradient-to-r after:from-transparent after:via-blue-500 after:to-transparent after:animate-border-flow",
 					isScrolled
 						? "bg-gray-950/90 backdrop-blur-md shadow-lg"
-						: "bg-transparent"
+						: "bg-gray-950/40 backdrop-blur-sm"
 				)}
 			>
-				<div className="container mx-auto px-4 py-4">
+				<div className="container mx-auto px-4 py-6">
 					<div className="flex items-center justify-between">
 						{/* Logo */}
 						<Link href="/" className="flex items-center">
-							<span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+							<span className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
 								Accelr8
 							</span>
 						</Link>
 
 						{/* Desktop Navigation - Split with Apply in the middle */}
-						<nav className="hidden md:flex items-center space-x-6">
+						<nav className="hidden md:flex items-center space-x-8">
 							{/* First two nav items */}
-							<div className="flex items-center space-x-6">
+							<div className="flex items-center space-x-8">
 								{navItems.slice(0, 2).map((item) => (
 									<Link
 										key={item.name}
 										href={item.href}
 										className={cn(
-											"text-sm font-medium transition-colors hover:text-blue-400",
+											"text-base font-medium transition-colors hover:text-blue-400",
 											pathname === item.href
 												? "text-blue-500"
-												: "text-gray-300"
+												: "text-gray-200"
 										)}
 									>
 										{item.name}
@@ -76,23 +76,23 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 							</div>
 
 							{/* Highlighted Apply Button */}
-							<Button asChild variant="outline" className="font-medium text-base px-6 border-2 border-blue-500 hover:bg-blue-500/20 hover:text-white">
+							<Button asChild variant="outline" className="font-medium text-base px-8 py-6 border-2 border-blue-500 hover:bg-blue-500/20 hover:text-white">
 								<Link href="/apply">
 									Apply Now
 								</Link>
 							</Button>
 
 							{/* Last two nav items */}
-							<div className="flex items-center space-x-6">
+							<div className="flex items-center space-x-8">
 								{navItems.slice(2, 4).map((item) => (
 									<Link
 										key={item.name}
 										href={item.href}
 										className={cn(
-											"text-sm font-medium transition-colors hover:text-blue-400",
+											"text-base font-medium transition-colors hover:text-blue-400",
 											pathname === item.href
 												? "text-blue-500"
-												: "text-gray-300"
+												: "text-gray-200"
 										)}
 									>
 										{item.name}
@@ -104,11 +104,11 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 						{/* Auth or Dashboard buttons */}
 						<div className="hidden md:flex items-center space-x-4">
 							{user ? (
-								<Button asChild variant="outline">
+								<Button asChild variant="outline" className="text-base px-6 py-5">
 									<Link href="/dashboard">Dashboard</Link>
 								</Button>
 							) : (
-								<Button asChild variant="default" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+								<Button asChild variant="default" className="text-base px-6 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
 									<Link href="/login">Login</Link>
 								</Button>
 							)}
@@ -268,4 +268,32 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 			</footer>
 		</div>
 	);
+}
+
+// Add at the bottom of the file - animation keyframe for the border flow
+const styles = `
+@keyframes borderFlow {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+:root {
+  --animation-duration: 3s;
+}
+
+.animate-border-flow {
+  background-size: 200% 100%;
+  animation: borderFlow var(--animation-duration) linear infinite;
+}
+`;
+
+// Add the styles to the document
+if (typeof document !== 'undefined') {
+	const styleElement = document.createElement('style');
+	styleElement.textContent = styles;
+	document.head.appendChild(styleElement);
 } 

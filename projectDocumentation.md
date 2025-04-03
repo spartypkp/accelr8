@@ -395,7 +395,7 @@ async function getHouseWithResidents(houseId: string) {
    - Quick stats on success stories
    - Call-to-action for applications
 
-2. **About Page**
+2. **Story Page**
    - Company story and philosophy
    - Team members/leadership profiles
    - Accelr8 mission and values
@@ -414,11 +414,8 @@ async function getHouseWithResidents(houseId: string) {
    - Upcoming events specific to that house
    - House-specific FAQs
 
-5. **Programs/Events Page**
-   - Hackathons
-   - Demo days
-   - Investor pitch sessions
-   - Community events calendar
+5. **Services Page**
+- Page for showcasing non-housing services accelr8 offers founders and startups
 
 6. **Application Page**
    - Application form
@@ -546,7 +543,7 @@ For managing the entire Accelr8 operation across all houses:
 
 ```
 /                                  # Main homepage
-/about                             # About Accelr8
+/story                            # About Accelr8 Our story
 /houses                            # All houses overview
 /houses/[houseId]                  # Public house page
 /events                            # Organization events

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth";
+import { signOut } from "@/lib/auth-utils";
 import { cn } from "@/lib/utils";
 import {
 	Calendar,

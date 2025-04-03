@@ -11,6 +11,36 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
+// Password validation helper
+const validatePassword = (password: string): { valid: boolean; message: string; } => {
+	// Minimum 8 characters
+	if (password.length < 8) {
+		return { valid: false, message: 'Password must be at least 8 characters' };
+	}
+
+	// At least one uppercase letter
+	if (!/[A-Z]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one uppercase letter' };
+	}
+
+	// At least one lowercase letter
+	if (!/[a-z]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one lowercase letter' };
+	}
+
+	// At least one number
+	if (!/[0-9]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one number' };
+	}
+
+	// At least one special character
+	if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+		return { valid: false, message: 'Password must contain at least one special character' };
+	}
+
+	return { valid: true, message: '' };
+};
+
 export function SignUpForm() {
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
@@ -30,8 +60,10 @@ export function SignUpForm() {
 			return;
 		}
 
-		if (password.length < 6) {
-			setError('Password must be at least 6 characters');
+		// Advanced password validation
+		const passwordCheck = validatePassword(password);
+		if (!passwordCheck.valid) {
+			setError(passwordCheck.message);
 			return;
 		}
 
@@ -108,12 +140,16 @@ export function SignUpForm() {
 							<Input
 								id="password"
 								type="password"
-								placeholder="Min 6 characters"
+								placeholder="Min 8 characters with letters, numbers & symbols"
 								value={password}
 								onChange={(e) => setPassword(e.target.value)}
 								required
 								disabled={isLoading}
 							/>
+							<p className="text-xs text-gray-500">
+								Password must be at least 8 characters and include uppercase, lowercase,
+								numbers, and special characters.
+							</p>
 						</div>
 
 						<div className="space-y-2">
