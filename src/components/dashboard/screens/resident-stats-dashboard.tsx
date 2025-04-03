@@ -1,4 +1,5 @@
 import { getAllResidents } from '@/lib/data/data-utils';
+import { Resident } from '@/lib/data/mock-data';
 import { ResidentStatsPage } from './resident-stats-page';
 
 export function ResidentStatsDashboard() {
@@ -6,7 +7,7 @@ export function ResidentStatsDashboard() {
 	const allResidents = getAllResidents();
 
 	// Group residents into pages of 4
-	const residentGroups = [];
+	const residentGroups: Resident[][] = [];
 	for (let i = 0; i < allResidents.length; i += 4) {
 		residentGroups.push(allResidents.slice(i, i + 4));
 	}

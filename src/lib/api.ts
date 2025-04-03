@@ -210,6 +210,7 @@ export async function getHouses(): Promise<SanityHouse[]> {
       _id,
       name,
       slug,
+      description,
       location,
       mainImage,
       featured

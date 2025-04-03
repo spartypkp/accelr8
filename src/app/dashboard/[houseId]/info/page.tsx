@@ -1,3 +1,5 @@
+"use client";
+
 import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,15 +19,9 @@ import {
 	Wifi,
 	Wrench
 } from "lucide-react";
-import { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-
-export const metadata: Metadata = {
-	title: "House Information | Accelr8 Dashboard",
-	description: "House information, rules, amenities and FAQs for residents",
-};
 
 // Mock data for house information
 const houseData = {

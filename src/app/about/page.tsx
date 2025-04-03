@@ -171,7 +171,11 @@ export default async function AboutPage() {
 										<div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 to-purple-900/20 mix-blend-overlay z-10"></div>
 										{member.profileImage ? (
 											<Image
-												src={urlFor(member.profileImage).width(500).height(300).url()}
+												src={
+													member.profileImage.asset
+														? urlFor(member.profileImage).width(500).height(300).url()
+														: '/placeholder-avatar.png' // Fallback image path
+												}
 												alt={member.name}
 												fill
 												style={{ objectFit: 'cover' }}

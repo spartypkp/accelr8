@@ -36,7 +36,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { ApplicationData, getHouseIdFromSlug, submitApplication } from "@/lib/applications";
-import { useAuth } from "@/lib/auth";
+import { useAuth } from "@/lib/auth/client";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import {
@@ -54,7 +54,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 
@@ -96,7 +96,7 @@ const applicationSchema = z.object({
 
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
-export default function ApplicationPage() {
+function ApplicationPageContent() {
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
 	const router = useRouter();
@@ -1051,5 +1051,13 @@ export default function ApplicationPage() {
 				</div>
 			</section>
 		</PublicLayout>
+	);
+}
+
+export default function ApplicationPage() {
+	return (
+		<Suspense fallback={<div>Loading...</div>}>
+			<ApplicationPageContent />
+		</Suspense>
 	);
 } 
