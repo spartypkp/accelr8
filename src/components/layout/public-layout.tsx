@@ -5,6 +5,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { useAuth } from '@/lib/auth/context';
 import { cn } from '@/lib/utils';
 import { Menu, X } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -40,19 +41,20 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 			{/* Navigation */}
 			<header
 				className={cn(
-					"fixed top-0 w-full z-50 transition-all duration-300 border-b border-blue-500/30 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-gradient-to-r after:from-transparent after:via-blue-500 after:to-transparent after:animate-border-flow",
+					"fixed top-0 w-full z-50 transition-all duration-300 border-b border-primary/30 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-gradient-to-r after:from-transparent after:via-primary after:to-transparent after:animate-border-flow",
 					isScrolled
-						? "bg-gray-950/90 backdrop-blur-md shadow-lg"
-						: "bg-gray-950/40 backdrop-blur-sm"
+						? "bg-background/90 backdrop-blur-md shadow-lg"
+						: "bg-background/40 backdrop-blur-sm"
 				)}
 			>
 				<div className="container mx-auto px-4 py-6">
 					<div className="flex items-center justify-between">
 						{/* Logo */}
 						<Link href="/" className="flex items-center">
-							<span className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+							<Image src="/logo.png" alt="Accelr8 Logo" width={200} height={200} />
+							{/* <span className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">
 								Accelr8
-							</span>
+							</span> */}
 						</Link>
 
 						{/* Desktop Navigation - Split with Apply in the middle */}
@@ -64,10 +66,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 										key={item.name}
 										href={item.href}
 										className={cn(
-											"text-base font-medium transition-colors hover:text-blue-400",
+											"text-base font-medium transition-colors hover:text-primary",
 											pathname === item.href
-												? "text-blue-500"
-												: "text-gray-200"
+												? "text-primary"
+												: "text-foreground"
 										)}
 									>
 										{item.name}
@@ -76,7 +78,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 							</div>
 
 							{/* Highlighted Apply Button */}
-							<Button asChild variant="outline" className="font-medium text-base px-8 py-6 border-2 border-blue-500 hover:bg-blue-500/20 hover:text-white">
+							<Button asChild variant="outline" className="font-medium text-base px-8 py-6 border-2 border-primary hover:bg-primary/10 hover:text-primary">
 								<Link href="/apply">
 									Apply Now
 								</Link>
@@ -89,10 +91,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 										key={item.name}
 										href={item.href}
 										className={cn(
-											"text-base font-medium transition-colors hover:text-blue-400",
+											"text-base font-medium transition-colors hover:text-primary",
 											pathname === item.href
-												? "text-blue-500"
-												: "text-gray-200"
+												? "text-primary"
+												: "text-foreground"
 										)}
 									>
 										{item.name}
@@ -108,7 +110,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 									<Link href="/dashboard">Dashboard</Link>
 								</Button>
 							) : (
-								<Button asChild variant="default" className="text-base px-6 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+								<Button asChild variant="default" className="text-base px-6 py-5 bg-gradient-primary">
 									<Link href="/login">Login</Link>
 								</Button>
 							)}
@@ -126,7 +128,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 								<div className="flex flex-col h-full">
 									<div className="flex items-center justify-between pb-4 border-b">
 										<Link href="/" className="flex items-center">
-											<span className="text-lg font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+											<span className="text-lg font-bold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text">
 												Accelr8
 											</span>
 										</Link>
@@ -144,10 +146,10 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 												key={item.name}
 												href={item.href}
 												className={cn(
-													"text-base font-medium transition-colors hover:text-blue-400",
+													"text-base font-medium transition-colors hover:text-primary",
 													pathname === item.href
-														? "text-blue-500"
-														: "text-gray-300"
+														? "text-primary"
+														: "text-muted-foreground"
 												)}
 											>
 												{item.name}
@@ -156,7 +158,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 										{/* Highlighted Apply Button for Mobile */}
 										<Link
 											href="/apply"
-											className="text-base font-bold text-blue-500 border-2 border-blue-500 rounded-md py-2 px-4 text-center hover:bg-blue-500/20"
+											className="text-base font-bold text-primary border-2 border-primary rounded-md py-2 px-4 text-center hover:bg-primary/10"
 										>
 											Apply Now
 										</Link>
@@ -168,7 +170,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 												<Link href="/dashboard">Dashboard</Link>
 											</Button>
 										) : (
-											<Button asChild className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+											<Button asChild className="bg-gradient-primary">
 												<Link href="/login">Login</Link>
 											</Button>
 										)}
@@ -186,26 +188,26 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 			</main>
 
 			{/* Footer */}
-			<footer className="bg-gray-950 border-t border-gray-800">
+			<footer className="bg-muted border-t border-border">
 				<div className="container mx-auto px-4 py-12">
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-8">
 						<div>
-							<h3 className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text mb-4">
+							<h3 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary text-transparent bg-clip-text mb-4">
 								Accelr8
 							</h3>
-							<p className="text-gray-400 mb-4">
+							<p className="text-muted-foreground mb-4">
 								Accelerating innovation through community, collaboration, and shared living spaces.
 							</p>
 						</div>
 
 						<div>
-							<h4 className="text-white font-medium mb-4">Navigation</h4>
+							<h4 className="text-foreground font-medium mb-4">Navigation</h4>
 							<ul className="space-y-2">
 								{navItems.map((item) => (
 									<li key={item.name}>
 										<Link
 											href={item.href}
-											className="text-gray-400 hover:text-blue-400 transition-colors"
+											className="text-muted-foreground hover:text-primary transition-colors"
 										>
 											{item.name}
 										</Link>
@@ -214,7 +216,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 								<li>
 									<Link
 										href="/apply"
-										className="text-blue-400 font-medium hover:text-blue-300 transition-colors"
+										className="text-primary font-medium hover:text-primary/80 transition-colors"
 									>
 										Apply Now
 									</Link>
@@ -223,12 +225,12 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 						</div>
 
 						<div>
-							<h4 className="text-white font-medium mb-4">Legal</h4>
+							<h4 className="text-foreground font-medium mb-4">Legal</h4>
 							<ul className="space-y-2">
 								<li>
 									<Link
 										href="/privacy-policy"
-										className="text-gray-400 hover:text-blue-400 transition-colors"
+										className="text-muted-foreground hover:text-primary transition-colors"
 									>
 										Privacy Policy
 									</Link>
@@ -236,7 +238,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 								<li>
 									<Link
 										href="/terms-of-service"
-										className="text-gray-400 hover:text-blue-400 transition-colors"
+										className="text-muted-foreground hover:text-primary transition-colors"
 									>
 										Terms of Service
 									</Link>
@@ -245,14 +247,14 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 						</div>
 
 						<div>
-							<h4 className="text-white font-medium mb-4">Connect</h4>
-							<address className="not-italic text-gray-400 space-y-2">
+							<h4 className="text-foreground font-medium mb-4">Connect</h4>
+							<address className="not-italic text-muted-foreground space-y-2">
 								<p>1551 Larkin Street</p>
 								<p>San Francisco, CA 94109</p>
 								<p>
 									<a
 										href="mailto:hello@accelr8.io"
-										className="hover:text-blue-400 transition-colors"
+										className="hover:text-primary transition-colors"
 									>
 										hello@accelr8.io
 									</a>
@@ -261,7 +263,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 						</div>
 					</div>
 
-					<div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500 text-sm">
+					<div className="border-t border-border mt-8 pt-8 text-center text-muted-foreground text-sm">
 						&copy; {new Date().getFullYear()} Accelr8. All rights reserved.
 					</div>
 				</div>

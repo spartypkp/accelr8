@@ -1,6 +1,7 @@
 'use client';
 
-import { DashboardLayout } from "@/components/layout/dashboard-layout";
+import { ResourcesCard } from "@/components/dashboard/cards/ResourcesCard";
+import { DashboardPanel } from "@/components/dashboard/panels/DashboardPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,7 +27,6 @@ import {
 	Zap
 } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BookingModal } from "./BookingModal";
@@ -168,410 +168,358 @@ export default function ResourcesPage() {
 	};
 
 	return (
-		<DashboardLayout>
-			{loading ? (
-				<div className="flex items-center justify-center h-96">
-					<div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 dark:border-white"></div>
+		<div className="container mx-auto py-6">
+			<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+				<div>
+					<h1 className="text-2xl font-bold tracking-tight">Resources</h1>
+					<p className="text-muted-foreground">{houseName}</p>
 				</div>
-			) : (
-				<div className="p-6">
-					<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-						<div>
-							<h1 className="text-2xl font-bold">Resources</h1>
-							<p className="text-gray-500 dark:text-gray-400">{houseName}</p>
-						</div>
 
-						<div className="flex items-center space-x-2 mt-4 md:mt-0">
-							<div className="flex border border-gray-200 dark:border-gray-700 rounded-md">
-								<Button
-									variant={viewMode === "grid" ? "default" : "ghost"}
-									size="sm"
-									className="rounded-r-none"
-									onClick={() => setViewMode("grid")}
-								>
-									<LayoutGrid className="h-4 w-4" />
-								</Button>
-								<Button
-									variant={viewMode === "list" ? "default" : "ghost"}
-									size="sm"
-									className="rounded-l-none"
-									onClick={() => setViewMode("list")}
-								>
-									<ListFilter className="h-4 w-4" />
-								</Button>
-							</div>
-							<Button variant="outline" size="sm">
-								<Filter className="h-4 w-4 mr-2" />
-								Filter
-							</Button>
-							<Button size="sm">
-								<CalendarDays className="h-4 w-4 mr-2" />
-								My Bookings
-							</Button>
-						</div>
+				<div className="flex items-center space-x-2 mt-4 md:mt-0">
+					<div className="flex border rounded-md">
+						<Button
+							variant={viewMode === "grid" ? "default" : "ghost"}
+							size="sm"
+							className="rounded-r-none"
+							onClick={() => setViewMode("grid")}
+						>
+							<LayoutGrid className="h-4 w-4" />
+						</Button>
+						<Button
+							variant={viewMode === "list" ? "default" : "ghost"}
+							size="sm"
+							className="rounded-l-none"
+							onClick={() => setViewMode("list")}
+						>
+							<ListFilter className="h-4 w-4" />
+						</Button>
 					</div>
+					<Button variant="outline" size="sm">
+						<Filter className="h-4 w-4 mr-2" />
+						Filter
+					</Button>
+					<Button size="sm">
+						<CalendarDays className="h-4 w-4 mr-2" />
+						My Bookings
+					</Button>
+				</div>
+			</div>
 
-					<Tabs
-						defaultValue="all"
-						className="space-y-6"
-						value={activeTab}
-						onValueChange={setActiveTab}
-					>
-						<TabsList className="bg-gray-100 dark:bg-gray-800">
-							<TabsTrigger value="all">All Resources</TabsTrigger>
-							<TabsTrigger value="available">Available Now</TabsTrigger>
-							<TabsTrigger value="popular">Popular</TabsTrigger>
-							<TabsTrigger value="mine">My Bookings</TabsTrigger>
-						</TabsList>
+			{/* Card Overview Section */}
+			<DashboardPanel className="mb-8">
+				<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+					{/* Available Resources Card */}
+					<ResourcesCard houseId={houseId} limit={5} />
 
-						{/* Filter Bar */}
-						<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
-							<div className="relative w-full max-w-xs">
-								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
-								<Input
-									placeholder="Search resources..."
-									className="pl-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-								/>
-							</div>
-
-							<div className="flex flex-wrap gap-2">
-								{resourceTypes.map(type => (
-									<Button
-										key={type}
-										variant={selectedType === type ? "default" : "outline"}
-										size="sm"
-										onClick={() => setSelectedType(type)}
-									>
-										{type}
-									</Button>
-								))}
-							</div>
-						</div>
-
-						{/* All Resources, Available, and Popular Tabs */}
-						<TabsContent value="all" className="space-y-6">
-							{filteredResources.length === 0 ? (
-								<div className="text-center py-10 bg-gray-50 dark:bg-gray-800 rounded-md">
-									<div className="text-gray-500 dark:text-gray-400">
-										<Sofa className="h-10 w-10 mx-auto mb-3" />
-										<h3 className="text-lg font-medium mb-1">No resources found</h3>
-										<p>
-											{searchQuery
-												? "Try adjusting your search term"
-												: selectedType !== "All Types"
-													? `No ${selectedType.toLowerCase()} resources found`
-													: "No resources have been added yet"}
-										</p>
-									</div>
+					{/* My Upcoming Bookings Card */}
+					<Card className="overflow-hidden">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-base">My Upcoming Bookings</CardTitle>
+						</CardHeader>
+						<CardContent className="p-0">
+							{userBookings.length > 0 ? (
+								<div className="divide-y">
+									{userBookings.slice(0, 3).map((booking) => {
+										const resource = resources.find(r => r._id === booking.resourceId);
+										return resource ? (
+											<div key={booking._id} className="p-4 hover:bg-muted/50 transition-colors">
+												<div className="flex justify-between mb-1">
+													<div className="font-medium">{resource.name}</div>
+													<Badge variant="outline">{resource.type}</Badge>
+												</div>
+												<div className="text-sm text-muted-foreground flex items-center gap-1">
+													<Calendar className="h-3 w-3" />
+													<span>{new Date(booking.startTime).toLocaleDateString()}</span>
+												</div>
+												<div className="text-sm text-muted-foreground flex items-center gap-1">
+													<Clock className="h-3 w-3" />
+													<span>
+														{new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
+														{new Date(booking.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+													</span>
+												</div>
+											</div>
+										) : null;
+									})}
 								</div>
 							) : (
-								viewMode === "grid" ? (
-									<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-										{filteredResources.map((resource) => (
-											<Card key={resource._id} className="overflow-hidden h-full flex flex-col bg-white dark:bg-gray-900">
-												<div className="relative h-48 bg-gray-200 dark:bg-gray-800">
-													{resource.image ? (
-														<Image
-															src={urlFor(resource.image).width(400).height(192).url()}
-															alt={resource.name}
-															className="object-cover w-full h-full"
-															width={400}
-															height={192}
-														/>
-													) : (
-														<div className="absolute inset-0 flex items-center justify-center">
-															{resource.type === "Room" ? (
-																<Video className="h-12 w-12 text-gray-400" />
-															) : resource.type === "Equipment" ? (
-																<Zap className="h-12 w-12 text-gray-400" />
-															) : (
-																<Sofa className="h-12 w-12 text-gray-400" />
-															)}
-														</div>
-													)}
-													<Badge
-														className="absolute top-2 right-2"
-														variant={resource.availableNow ? "success" : "outline"}
-													>
-														{resource.availableNow ? "Available Now" : "Unavailable"}
-													</Badge>
-												</div>
-
-												<CardHeader className="pb-2">
-													<div className="flex justify-between items-start">
-														<div>
-															<CardTitle className="text-lg">{resource.name}</CardTitle>
-															<CardDescription>{resource.location}</CardDescription>
-														</div>
-														<Badge>{resource.type}</Badge>
-													</div>
-												</CardHeader>
-
-												<CardContent className="flex-1">
-													<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{resource.description}</p>
-
-													<div className="space-y-2">
-														{resource.capacity && (
-															<div className="flex items-center text-sm">
-																<Users className="h-4 w-4 mr-2 text-gray-500" />
-																<span>Capacity: {resource.capacity}</span>
-															</div>
-														)}
-														<div className="flex items-center text-sm">
-															<Clock className="h-4 w-4 mr-2 text-gray-500" />
-															<span>Cost: {resource.bookingCost || 'Free'}</span>
-														</div>
-													</div>
-
-													<div className="mt-4">
-														<div className="flex flex-wrap gap-2">
-															{resource.amenities && resource.amenities.slice(0, 3).map((amenity, idx) => (
-																<Badge key={idx} variant="outline">
-																	{amenity}
-																</Badge>
-															))}
-															{resource.amenities && resource.amenities.length > 3 && (
-																<Badge variant="outline">+{resource.amenities.length - 3} more</Badge>
-															)}
-														</div>
-													</div>
-												</CardContent>
-
-												<CardFooter className="border-t border-gray-100 dark:border-gray-800 pt-4">
-													<Button variant="outline" className="w-full" asChild>
-														<Link href={`/dashboard/${houseId}/resources/${resource._id}`}>
-															<Info className="h-4 w-4 mr-2" />
-															Details
-														</Link>
-													</Button>
-													<Button
-														className="w-full ml-2"
-														disabled={!resource.availableNow}
-														onClick={() => handleBookResource(resource)}
-													>
-														<Calendar className="h-4 w-4 mr-2" />
-														Book
-													</Button>
-												</CardFooter>
-											</Card>
-										))}
-									</div>
-								) : (
-									// Continue with list view
-									<div className="space-y-4">
-										{filteredResources.map((resource) => (
-											<Card key={resource._id} className="overflow-hidden bg-white dark:bg-gray-900">
-												<div className="flex flex-col md:flex-row">
-													<div className="relative md:w-48 h-32 md:h-auto bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
-														{resource.image ? (
-															<Image
-																src={urlFor(resource.image).width(192).height(128).url()}
-																alt={resource.name}
-																className="object-cover w-full h-full"
-																width={192}
-																height={128}
-															/>
-														) : (
-															<>
-																{resource.type === "Room" ? (
-																	<Video className="h-12 w-12 text-gray-400" />
-																) : resource.type === "Equipment" ? (
-																	<Zap className="h-12 w-12 text-gray-400" />
-																) : (
-																	<Sofa className="h-12 w-12 text-gray-400" />
-																)}
-															</>
-														)}
-														<Badge
-															className="absolute top-2 right-2"
-															variant={resource.availableNow ? "success" : "outline"}
-														>
-															{resource.availableNow ? "Available Now" : "Unavailable"}
-														</Badge>
-													</div>
-
-													<div className="flex-1 p-4">
-														<div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
-															<div>
-																<h3 className="text-lg font-medium">{resource.name}</h3>
-																<p className="text-sm text-gray-500 dark:text-gray-400">{resource.location} • {resource.type}</p>
-															</div>
-
-															<div className="flex items-center mt-2 md:mt-0">
-																{resource.capacity && (
-																	<div className="flex items-center text-sm mr-4">
-																		<Users className="h-4 w-4 mr-1 text-gray-500" />
-																		<span>{resource.capacity}</span>
-																	</div>
-																)}
-																<div className="flex items-center text-sm">
-																	<Clock className="h-4 w-4 mr-1 text-gray-500" />
-																	<span>{resource.bookingCost || 'Free'}</span>
-																</div>
-															</div>
-														</div>
-
-														<p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{resource.description}</p>
-
-														<div className="flex flex-wrap gap-2 mb-4">
-															{resource.amenities && resource.amenities.map((amenity, idx) => (
-																<Badge key={idx} variant="outline">
-																	{amenity}
-																</Badge>
-															))}
-														</div>
-
-														<div className="flex flex-col sm:flex-row sm:items-center justify-between">
-															<div className="text-sm text-gray-500 dark:text-gray-400">
-																{getResourceNextBooking(resource._id, bookings)}
-															</div>
-
-															<div className="flex gap-2 mt-3 sm:mt-0">
-																<Button variant="outline" size="sm" asChild>
-																	<Link href={`/dashboard/${houseId}/resources/${resource._id}`}>
-																		Details
-																	</Link>
-																</Button>
-																<Button
-																	size="sm"
-																	disabled={!resource.availableNow}
-																	onClick={() => handleBookResource(resource)}
-																>
-																	Book Now
-																</Button>
-															</div>
-														</div>
-													</div>
-												</div>
-											</Card>
-										))}
-									</div>
-								)
+								<div className="flex flex-col items-center justify-center p-8 text-center">
+									<CalendarDays className="h-8 w-8 text-muted-foreground/60 mb-3" />
+									<p className="text-sm text-muted-foreground mb-3">You don't have any upcoming bookings</p>
+									<Button variant="outline" size="sm">Book a Resource</Button>
+								</div>
 							)}
-						</TabsContent>
+						</CardContent>
+						{userBookings.length > 0 && (
+							<CardFooter className="border-t p-3">
+								<Button variant="outline" size="sm" className="w-full">View All Bookings</Button>
+							</CardFooter>
+						)}
+					</Card>
 
-						{/* My Bookings Tab */}
-						<TabsContent value="mine">
-							<div className="space-y-6">
-								<Card>
-									<CardHeader>
-										<CardTitle>Upcoming Bookings</CardTitle>
-										<CardDescription>Your reserved resources</CardDescription>
-									</CardHeader>
-									<CardContent>
-										{userBookings.length === 0 ? (
-											<div className="text-center py-6 text-gray-500">
-												<Calendar className="h-8 w-8 mx-auto mb-2" />
-												<p>You don't have any upcoming bookings</p>
-												<Button
-													variant="outline"
-													size="sm"
-													className="mt-2"
-													onClick={() => setActiveTab('all')}
-												>
-													Browse Resources
-												</Button>
-											</div>
+					{/* Popular Resources Card */}
+					<Card className="overflow-hidden">
+						<CardHeader className="pb-2">
+							<CardTitle className="text-base">Popular Resources</CardTitle>
+						</CardHeader>
+						<CardContent className="p-0">
+							<div className="divide-y">
+								{resources.slice(0, 3).map((resource) => (
+									<div key={resource._id} className="p-4 hover:bg-muted/50 transition-colors">
+										<div className="flex justify-between mb-1">
+											<div className="font-medium">{resource.name}</div>
+											<Badge variant="outline">{resource.type}</Badge>
+										</div>
+										<div className="text-sm text-muted-foreground">{resource.description}</div>
+										<div className="mt-2 flex items-center gap-2">
+											<Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={() => handleBookResource(resource)}>
+												Book Now
+											</Button>
+											<Badge variant={resource.availableNow ? "success" : "destructive"} className="h-5 text-[10px]">
+												{resource.availableNow ? 'Available' : 'In Use'}
+											</Badge>
+										</div>
+									</div>
+								))}
+							</div>
+						</CardContent>
+					</Card>
+				</div>
+			</DashboardPanel>
+
+			{/* Main Resources Listing */}
+			<Tabs
+				defaultValue="all"
+				className="space-y-6"
+				value={activeTab}
+				onValueChange={setActiveTab}
+			>
+				<TabsList className="bg-muted">
+					<TabsTrigger value="all">All Resources</TabsTrigger>
+					<TabsTrigger value="available">Available Now</TabsTrigger>
+					<TabsTrigger value="popular">Popular</TabsTrigger>
+					<TabsTrigger value="mine">My Bookings</TabsTrigger>
+				</TabsList>
+
+				{/* Filter Bar */}
+				<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-6">
+					<div className="relative w-full max-w-xs">
+						<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+						<Input
+							placeholder="Search resources..."
+							className="pl-10"
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+						/>
+					</div>
+
+					<div className="flex flex-wrap gap-2">
+						{resourceTypes.map(type => (
+							<Button
+								key={type}
+								variant={selectedType === type ? "default" : "outline"}
+								size="sm"
+								onClick={() => setSelectedType(type)}
+							>
+								{type}
+							</Button>
+						))}
+					</div>
+				</div>
+
+				{/* Resource listings */}
+				<TabsContent value="all" className="m-0">
+					{filteredResources.length === 0 ? (
+						<Card className="flex flex-col items-center justify-center p-12 text-center">
+							<Info className="h-10 w-10 text-muted-foreground mb-4" />
+							<CardTitle className="text-xl mb-2">No resources found</CardTitle>
+							<CardDescription>Try adjusting your filters or search criteria</CardDescription>
+						</Card>
+					) : (
+						<div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
+							{filteredResources.map((resource) => (
+								<Card key={resource._id} className={viewMode === "list" ? "overflow-hidden flex" : ""}>
+									{resource.image && viewMode === "grid" && (
+										<div className="relative h-48 w-full overflow-hidden">
+											<Image
+												src={urlFor(resource.image).url()}
+												alt={resource.name}
+												fill
+												className="object-cover"
+											/>
+											<Badge className={`absolute top-2 right-2 ${resource.availableNow
+												? 'bg-green-500'
+												: 'bg-red-500'
+												}`}>
+												{resource.availableNow ? 'Available' : 'In Use'}
+											</Badge>
+										</div>
+									)}
+
+									<div className={viewMode === "list" ? "flex-none w-24 h-24 relative" : "hidden"}>
+										{resource.image ? (
+											<Image
+												src={urlFor(resource.image).url()}
+												alt={resource.name}
+												fill
+												className="object-cover"
+											/>
 										) : (
-											<div>
-												{userBookings.map((booking) => {
-													const resource = resources.find(r => r._id === booking.sanity_resource_id);
-													const startDate = new Date(booking.start_time);
-													const endDate = new Date(booking.end_time);
-
-													return (
-														<div key={booking.id} className="flex py-4 border-b border-gray-100 dark:border-gray-800 last:border-0">
-															<div className="w-12 text-center">
-																<div className="text-lg font-bold">
-																	{startDate.getDate()}
-																</div>
-																<div className="text-xs text-gray-500">
-																	{startDate.toLocaleString('default', { month: 'short' })}
-																</div>
-															</div>
-															<div className="ml-4 flex-1">
-																<div className="flex justify-between">
-																	<h4 className="font-medium">
-																		{resource?.name || booking.title}
-																	</h4>
-																	<Button variant="ghost" size="icon">
-																		<MoreHorizontal className="h-4 w-4" />
-																	</Button>
-																</div>
-																<div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-																	<Clock className="h-3 w-3 mr-1" />
-																	<span>
-																		{formatTime(startDate)} - {formatTime(endDate)}
-																	</span>
-																</div>
-																<div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
-																	<Info className="h-3 w-3 mr-1" />
-																	<span>
-																		{booking.description || 'No description provided'}
-																	</span>
-																</div>
-															</div>
-														</div>
-													);
-												})}
+											<div className="bg-muted h-full w-full flex items-center justify-center">
+												<Sofa className="h-8 w-8 text-muted-foreground" />
 											</div>
 										)}
-									</CardContent>
-									{userBookings.length > 0 && (
-										<CardFooter>
-											<Button variant="outline" className="w-full">
-												View All Bookings
+									</div>
+
+									<div className={viewMode === "list" ? "flex-1" : ""}>
+										<CardHeader className={viewMode === "list" ? "p-3" : ""}>
+											<div className="flex items-center justify-between">
+												<CardTitle className={viewMode === "list" ? "text-base" : ""}>
+													{resource.name}
+												</CardTitle>
+												{viewMode === "list" && (
+													<Badge className={resource.availableNow ? 'bg-green-500' : 'bg-red-500'}>
+														{resource.availableNow ? 'Available' : 'In Use'}
+													</Badge>
+												)}
+											</div>
+											<CardDescription className="flex items-center gap-1">
+												{resource.type === "Room" ? (
+													<Video className="h-3 w-3" />
+												) : resource.type === "Equipment" ? (
+													<Zap className="h-3 w-3" />
+												) : (
+													<Sofa className="h-3 w-3" />
+												)}
+												<span>{resource.type}</span>
+												{resource.location && (
+													<>
+														<span className="mx-1">•</span>
+														<span>{resource.location}</span>
+													</>
+												)}
+											</CardDescription>
+										</CardHeader>
+
+										<CardContent className={viewMode === "list" ? "p-3 pt-0" : ""}>
+											{resource.description && (
+												<p className="text-sm text-muted-foreground mb-3">
+													{resource.description}
+												</p>
+											)}
+
+											{resource.capacity && (
+												<div className="flex items-center text-sm text-muted-foreground mb-1">
+													<Users className="h-4 w-4 mr-2" />
+													<span>Capacity: {resource.capacity}</span>
+												</div>
+											)}
+
+											{bookings.length > 0 && !resource.availableNow && (
+												<div className="flex items-center text-sm text-muted-foreground">
+													<Clock className="h-4 w-4 mr-2" />
+													<span>
+														Next available: {formatNextAvailableTime(resource._id, bookings)}
+													</span>
+												</div>
+											)}
+										</CardContent>
+
+										<CardFooter className={`${viewMode === "list" ? "p-3 pt-0" : ""} flex justify-between items-center`}>
+											<Button onClick={() => handleBookResource(resource)}>
+												Book Now
+											</Button>
+											<Button variant="ghost" size="icon">
+												<MoreHorizontal className="h-5 w-5" />
 											</Button>
 										</CardFooter>
-									)}
+									</div>
 								</Card>
-							</div>
-						</TabsContent>
-					</Tabs>
+							))}
+						</div>
+					)}
+				</TabsContent>
 
-					{/* Resource Booking Modal */}
-					<BookingModal
-						resource={selectedResource}
-						houseId={houseId}
-						isOpen={bookingModalOpen}
-						onClose={() => setBookingModalOpen(false)}
-						onSuccess={handleBookingSuccess}
-					/>
-				</div>
+				{/* Mirror structure for other tabs */}
+				<TabsContent value="available" className="m-0">
+					{/* Content for available resources */}
+				</TabsContent>
+
+				<TabsContent value="popular" className="m-0">
+					{/* Content for popular resources */}
+				</TabsContent>
+
+				<TabsContent value="mine" className="m-0">
+					{activeTab === "mine" && userBookings.length === 0 ? (
+						<Card className="flex flex-col items-center justify-center p-12 text-center">
+							<CalendarDays className="h-10 w-10 text-muted-foreground mb-4" />
+							<CardTitle className="text-xl mb-2">No bookings found</CardTitle>
+							<CardDescription className="mb-4">You haven't booked any resources yet</CardDescription>
+							<Button onClick={() => setActiveTab("all")}>Browse Resources</Button>
+						</Card>
+					) : (
+						<div className="space-y-4">
+							{/* User booking list would go here */}
+						</div>
+					)}
+				</TabsContent>
+			</Tabs>
+
+			{/* Booking Modal */}
+			{selectedResource && (
+				<BookingModal
+					resource={selectedResource}
+					isOpen={bookingModalOpen}
+					onClose={() => setBookingModalOpen(false)}
+					onBookingSuccess={handleBookingSuccess}
+				/>
 			)}
-		</DashboardLayout>
+		</div>
 	);
 }
 
-// Helper function to format time
-function formatTime(date: Date) {
-	return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
+// Format the next available time for a resource
+function formatNextAvailableTime(resourceId: string, bookings: Booking[]) {
+	const nextBooking = getResourceNextBooking(resourceId, bookings);
+	if (!nextBooking) return "Unknown";
 
-// Helper function to get the next booking for a resource
-function getResourceNextBooking(resourceId: string, bookings: Booking[]) {
-	const resourceBookings = bookings.filter(b =>
-		b.sanity_resource_id === resourceId &&
-		b.status === 'confirmed'
-	);
+	const now = new Date();
+	const endTime = new Date(nextBooking.endTime);
 
-	if (resourceBookings.length === 0) {
-		return <span>No upcoming bookings</span>;
+	// If ends today, show "Today at HH:MM"
+	if (endTime.toDateString() === now.toDateString()) {
+		return `Today at ${endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
 	}
 
-	// Sort by start time
-	resourceBookings.sort((a, b) =>
-		new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+	// If ends tomorrow, show "Tomorrow at HH:MM"
+	const tomorrow = new Date(now);
+	tomorrow.setDate(now.getDate() + 1);
+	if (endTime.toDateString() === tomorrow.toDateString()) {
+		return `Tomorrow at ${endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+	}
+
+	// Otherwise show date and time
+	return `${endTime.toLocaleDateString()} at ${endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+// Get the current/next booking for a resource
+function getResourceNextBooking(resourceId: string, bookings: Booking[]) {
+	const now = new Date();
+
+	// Find current bookings (where now is between start and end time)
+	const currentBookings = bookings.filter(b =>
+		b.resourceId === resourceId &&
+		new Date(b.startTime) <= now &&
+		new Date(b.endTime) > now
 	);
 
-	const nextBooking = resourceBookings[0];
-	const startDate = new Date(nextBooking.start_time);
+	if (currentBookings.length > 0) {
+		// Sort by end time (ascending) to get the one that ends first
+		return currentBookings.sort((a, b) =>
+			new Date(a.endTime).getTime() - new Date(b.endTime).getTime()
+		)[0];
+	}
 
-	return (
-		<span>
-			Next booking: {startDate.toLocaleDateString()} at {formatTime(startDate)}
-		</span>
-	);
+	// If no current bookings, return null
+	return null;
 } 

@@ -1,19 +1,14 @@
-// DEPRECATED: This file is being replaced by the new middleware.ts in the project root
-// This file will be deleted after migration is complete
-
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { extractParams, getRouteConfig } from '../auth/routes-config';
 
-// This function is no longer used and is left for reference
-// The new middleware.ts in the project root replaces this functionality
 export async function updateSession(request: NextRequest) {
-	console.warn("Warning: Using deprecated middleware. Use new middleware.ts instead.");
-
-	let supabaseResponse = NextResponse.next({
+	// Create response we'll modify as needed
+	let response = NextResponse.next({
 		request,
 	});
-	const requestUrl = new URL(request.url);
 
+	// Create Supabase client with proper cookie handling
 	const supabase = createServerClient(
 		process.env.NEXT_PUBLIC_SUPABASE_URL!,
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -24,71 +19,167 @@ export async function updateSession(request: NextRequest) {
 				},
 				setAll(cookiesToSet) {
 					cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-					supabaseResponse = NextResponse.next({
-						request,
-					});
 					cookiesToSet.forEach(({ name, value, options }) =>
-						supabaseResponse.cookies.set(name, value, options)
+						response.cookies.set(name, value, options)
 					);
 				},
 			},
 		}
 	);
 
-	// IMPORTANT: Avoid writing any logic between createServerClient and
-	// supabase.auth.getUser(). A simple mistake could make it very hard to debug
-	// issues with users being randomly logged out.
+	// Automatic session handling by Supabase
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
-	const isAuthRoute = requestUrl.pathname.startsWith('/auth');
 
-	if (user) {
-		// If user is signed in and tries to access auth routes, redirect to home
-		if (isAuthRoute) {
-			// Let the user access the reset-password route
-			if (requestUrl.pathname.startsWith('/auth/reset-password')) {
-				return supabaseResponse;
+	const pathname = request.nextUrl.pathname;
+
+	// Skip auth for static files and API routes
+	if (
+		pathname.startsWith('/_next') ||
+		pathname.startsWith('/images') ||
+		pathname.startsWith('/fonts') ||
+		pathname.includes('.') ||
+		pathname.startsWith('/api/')
+	) {
+		return response;
+	}
+
+	// Get route configuration
+	const routeConfig = getRouteConfig(pathname);
+
+	// Allow public routes
+	if (!routeConfig || routeConfig.public) {
+		return response;
+	}
+
+	// If no user and route requires auth, redirect to login
+	if (!user) {
+		const url = new URL('/login', request.url);
+		url.searchParams.set('redirectTo', pathname);
+		return NextResponse.redirect(url);
+	}
+
+	// Enhanced handling for dashboard entry point
+	if (pathname === '/dashboard') {
+		const url = new URL(request.url);
+		const userRole = user.user_metadata?.role || 'resident';
+
+		// For residents, redirect to their house dashboard
+		if (userRole === 'resident') {
+			try {
+				// Get user's active residency
+				const { data: residency } = await supabase
+					.from('residencies')
+					.select('sanity_house_id')
+					.eq('user_id', user.id)
+					.eq('status', 'active')
+					.maybeSingle();
+
+				if (residency?.sanity_house_id) {
+					url.pathname = `/dashboard/${residency.sanity_house_id}`;
+				} else {
+					// Resident without active house - redirect to houses page with message
+					url.pathname = '/houses';
+					url.searchParams.set('status', 'no_active_house');
+				}
+				return NextResponse.redirect(url);
+			} catch (error) {
+				console.error('Error fetching residency:', error);
 			}
-			const redirectUrl = new URL('/', requestUrl.origin);
-			return NextResponse.redirect(redirectUrl);
-		}
-		const { data, error } = await supabase.from('contoural_users').select('access_level').eq('id', user.id).single();
-		if (error) {
-			console.error(error);
 		}
 
-		// If the user has an acces_level of "contractor", only let them access any routes that start with "/citations/citationHelper"
-		if (data?.access_level === "contractor") {
-			const allowedRoutes = ["/citations/citationHelper", "docs"];
-			// Check if the current route is not in the allowedRoutes array. If it is, allow acces. If not, redirect to /citations/citationHelper
-			if (!allowedRoutes.some(route => requestUrl.pathname.startsWith(route))) {
-				const redirectUrl = new URL('/citations/citationHelper', requestUrl.origin);
-				return NextResponse.redirect(redirectUrl);
+		// For admins, redirect to admin dashboard (either first house or global)
+		else if (userRole === 'admin') {
+			try {
+				// Get houses managed by admin
+				const { data: houses } = await supabase
+					.from('house_admins')
+					.select('sanity_house_id')
+					.eq('user_id', user.id)
+					.limit(1);
+
+				if (houses && houses.length > 0) {
+					url.pathname = `/admin/${houses[0].sanity_house_id}`;
+				} else {
+					url.pathname = '/admin';
+				}
+				return NextResponse.redirect(url);
+			} catch (error) {
+				console.error('Error fetching admin houses:', error);
 			}
 		}
-	} else {
-		// If no user and not on auth route, redirect to login
-		if (!isAuthRoute) {
-			const redirectUrl = new URL('/auth/login', requestUrl.origin);
-			// Preserve the original URL to redirect back after login
-			redirectUrl.searchParams.set('redirectTo', requestUrl.pathname);
-			return NextResponse.redirect(redirectUrl);
+
+		// For super_admins, redirect to admin overview
+		else if (userRole === 'super_admin') {
+			url.pathname = '/admin';
+			return NextResponse.redirect(url);
 		}
 	}
 
-	// IMPORTANT: You *must* return the supabaseResponse object as it is. If you're
-	// creating a new response object with NextResponse.next() make sure to:
-	// 1. Pass the request in it, like so:
-	//    const myNewResponse = NextResponse.next({ request })
-	// 2. Copy over the cookies, like so:
-	//    myNewResponse.cookies.setAll(supabaseResponse.cookies.getAll())
-	// 3. Change the myNewResponse object to fit your needs, but avoid changing
-	//    the cookies!
-	// 4. Finally:
-	//    return myNewResponse
-	// If this is not done, you may be causing the browser and server to go out
-	// of sync and terminate the user's session prematurely!
+	// For protected routes, check role permissions
+	if (routeConfig.role) {
+		const userRole = user.user_metadata?.role || 'resident';
+		const roleHierarchy = { resident: 1, admin: 2, super_admin: 3 };
 
-	return supabaseResponse;
+		if (roleHierarchy[userRole] < roleHierarchy[routeConfig.role]) {
+			return NextResponse.redirect(
+				new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
+			);
+		}
+	}
+
+	// Check house access if needed
+	if (routeConfig.checkHouseAccess) {
+		const params = extractParams(routeConfig.path, pathname);
+		const houseId = params.houseId;
+
+		if (houseId) {
+			// Super admins have access to all houses
+			const userRole = user.user_metadata?.role || 'resident';
+			if (userRole === 'super_admin') {
+				return response;
+			}
+
+			// Cache the access check in a cookie for 5 minutes to avoid db queries on every page
+			const cacheKey = `house_access:${user.id}:${houseId}`;
+			const cachedAccess = request.cookies.get(cacheKey)?.value;
+
+			if (cachedAccess === 'true') {
+				return response;
+			}
+
+			try {
+				// Determine the correct table based on user role
+				const table = userRole === 'admin' ? 'house_admins' : 'residencies';
+
+				// Minimal query - just get ID for efficiency
+				const { data, error } = await supabase
+					.from(table)
+					.select('id')
+					.eq('user_id', user.id)
+					.eq('sanity_house_id', houseId)
+					.maybeSingle();
+
+				if (!data) {
+					return NextResponse.redirect(
+						new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
+					);
+				}
+
+				// Cache the positive result
+				response.cookies.set(cacheKey, 'true', {
+					maxAge: 300, // 5 minutes
+					path: '/',
+				});
+			} catch (error) {
+				console.error('Error checking house access:', error);
+				return NextResponse.redirect(
+					new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
+				);
+			}
+		}
+	}
+
+	return response;
 }

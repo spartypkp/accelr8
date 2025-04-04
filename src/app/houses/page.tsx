@@ -4,8 +4,8 @@ import { PublicLayout } from "@/components/layout/public-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getHouses, type SanityHouse } from "@/lib/api";
 import { urlFor } from "@/lib/sanity";
+import { House } from "@/lib/sanity.types";
 import {
 	AlertCircle,
 	ArrowRight,
@@ -24,12 +24,28 @@ import { Suspense, useEffect, useState } from "react";
 function HousesContent() {
 	const searchParams = useSearchParams();
 	const status = searchParams.get('status');
-	const [houses, setHouses] = useState<SanityHouse[]>([]);
+	const [houses, setHouses] = useState<House[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		const fetchHouses = async () => {
-			const housesData = await getHouses();
-			setHouses(housesData);
+			try {
+				// Use our API route instead of direct Sanity call
+				const response = await fetch('/api/houses');
+
+				if (!response.ok) {
+					throw new Error(`API responded with status: ${response.status}`);
+				}
+
+				const housesData = await response.json();
+				setHouses(housesData);
+			} catch (error) {
+				console.error('Error fetching houses:', error);
+				setError('Failed to load houses. Please try again later.');
+			} finally {
+				setLoading(false);
+			}
 		};
 
 		fetchHouses();
@@ -39,13 +55,13 @@ function HousesContent() {
 		<>
 			{/* Hero Section */}
 			<section className="relative pt-32 pb-20 md:pt-48 md:pb-32 overflow-hidden">
-				<div className="absolute inset-0 bg-gradient-to-b from-black via-gray-950 to-blue-950 z-0"></div>
+				<div className="absolute inset-0 bg-gradient-primary-tr z-0"></div>
 				<div className="container mx-auto px-4 relative z-10">
 					<div className="max-w-3xl mx-auto text-center">
 						<h1 className="text-4xl md:text-6xl font-bold mb-6">
-							Our <span className="bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">Houses</span>
+							Our <span className="gradient-text">Houses</span>
 						</h1>
-						<p className="text-xl text-gray-300 mb-8">
+						<p className="text-xl text-muted-foreground mb-8">
 							Explore our network of coliving spaces designed specifically for founders,
 							builders, and innovators across the United States.
 						</p>
@@ -54,15 +70,15 @@ function HousesContent() {
 			</section>
 
 			{/* Search and Filter Section */}
-			<section className="py-12 bg-gray-950 border-b border-gray-800">
+			<section className="py-12 bg-background border-b border-border">
 				<div className="container mx-auto px-4">
 					<div className="flex flex-col md:flex-row gap-4 items-center justify-between">
 						{/* Search Bar */}
 						<div className="relative w-full max-w-md">
-							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
+							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
 								placeholder="Search houses..."
-								className="pl-10 bg-gray-900 border-gray-800"
+								className="pl-10"
 							/>
 						</div>
 
@@ -80,7 +96,6 @@ function HousesContent() {
 								key={index}
 								variant={index === 0 ? "default" : "outline"}
 								size="sm"
-								className={index === 0 ? "" : "bg-gray-900 border-gray-800"}
 							>
 								{tag}
 							</Button>
@@ -90,7 +105,7 @@ function HousesContent() {
 			</section>
 
 			{/* Houses Grid */}
-			<section className="py-20 bg-gray-950">
+			<section className="py-20 bg-background">
 				<div className="container mx-auto px-4">
 					{status === 'no_active_house' && (
 						<Alert variant="destructive" className="mb-8">
@@ -102,31 +117,52 @@ function HousesContent() {
 							</AlertDescription>
 						</Alert>
 					)}
-					<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-						{houses?.length > 0 ? (
-							houses.map((house) => (
+
+					{loading ? (
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+							{[1, 2, 3].map((index) => (
+								<div key={index} className="bg-card rounded-lg overflow-hidden border border-border shadow-lg h-[400px] animate-pulse">
+									<div className="h-48 bg-muted" />
+									<div className="p-6">
+										<div className="h-6 bg-muted rounded mb-3 w-3/4" />
+										<div className="h-4 bg-muted rounded mb-4 w-1/2" />
+										<div className="h-4 bg-muted rounded mb-4 w-full" />
+										<div className="h-10 bg-muted rounded mt-4" />
+									</div>
+								</div>
+							))}
+						</div>
+					) : error ? (
+						<div className="text-center py-12">
+							<Building className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+							<h3 className="text-xl font-bold mb-2">Couldn't Load Houses</h3>
+							<p className="text-muted-foreground max-w-md mx-auto mb-6">{error}</p>
+						</div>
+					) : houses?.length > 0 ? (
+						<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+							{houses.map((house) => (
 								<div
 									key={house._id}
-									className="bg-gray-900 rounded-lg overflow-hidden border border-gray-800 shadow-lg transition-all hover:shadow-xl hover:border-blue-800/50"
+									className="bg-card rounded-lg overflow-hidden border border-border shadow-lg transition-all hover:shadow-xl hover-lift"
 								>
 									{/* House Image */}
 									<div className="h-48 relative">
-										<div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 to-purple-900/20 mix-blend-overlay z-10"></div>
+										<div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-secondary/20 mix-blend-overlay z-10"></div>
 										{house.mainImage ? (
 											<Image
 												src={urlFor(house.mainImage).width(400).height(192).url()}
-												alt={house.name}
+												alt={house.name || 'House image'}
 												fill
 												style={{ objectFit: 'cover' }}
 											/>
 										) : (
-											<div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
-												<Building className="h-12 w-12 text-gray-700" />
+											<div className="absolute inset-0 bg-muted flex items-center justify-center">
+												<Building className="h-12 w-12 text-muted-foreground" />
 											</div>
 										)}
 
 										{/* Availability Badge */}
-										<div className="absolute top-4 right-4 bg-green-900/80 text-green-400 text-xs px-2 py-1 rounded-full backdrop-blur-sm z-20">
+										<div className="absolute top-4 right-4 bg-success/80 text-success-foreground text-xs px-2 py-1 rounded-full backdrop-blur-sm z-20">
 											Available
 										</div>
 									</div>
@@ -137,23 +173,23 @@ function HousesContent() {
 											<h3 className="text-xl font-bold">{house.name}</h3>
 										</div>
 
-										<div className="flex items-center mb-4 text-sm text-gray-400">
+										<div className="flex items-center mb-4 text-sm text-muted-foreground">
 											<MapPin className="h-4 w-4 mr-1" />
 											<span>{house.location?.city}, {house.location?.state}</span>
 										</div>
 
-										<p className="text-gray-400 mb-4 line-clamp-3">
-											{house.description}
+										<p className="text-muted-foreground mb-4 line-clamp-3">
+											{house.shortDescription}
 										</p>
 
 										{/* Key Features */}
 										<div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
 											<div className="flex items-center text-sm">
-												<Users className="h-4 w-4 text-blue-400 mr-2" />
+												<Users className="h-4 w-4 text-primary mr-2" />
 												<span>20 Residents</span>
 											</div>
 											<div className="flex items-center text-sm">
-												<Wifi className="h-4 w-4 text-blue-400 mr-2" />
+												<Wifi className="h-4 w-4 text-primary mr-2" />
 												<span>Gigabit Internet</span>
 											</div>
 										</div>
@@ -174,42 +210,42 @@ function HousesContent() {
 										</div>
 									</div>
 								</div>
-							))
-						) : (
-							// Fallback when no houses are available
-							<div className="col-span-full text-center py-12">
-								<Building className="h-16 w-16 text-gray-700 mx-auto mb-4" />
-								<h3 className="text-xl font-bold mb-2">No Houses Available</h3>
-								<p className="text-gray-400 max-w-md mx-auto mb-6">
-									We're currently working on adding new house locations. Please check back soon or contact us for more information.
-								</p>
-								<Button asChild>
-									<a href="mailto:hello@accelr8.io">
-										Contact Us
-									</a>
-								</Button>
-							</div>
-						)}
-					</div>
+							))}
+						</div>
+					) : (
+						// Fallback when no houses are available
+						<div className="col-span-full text-center py-12">
+							<Building className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+							<h3 className="text-xl font-bold mb-2">No Houses Available</h3>
+							<p className="text-muted-foreground max-w-md mx-auto mb-6">
+								We're currently working on adding new house locations. Please check back soon or contact us for more information.
+							</p>
+							<Button asChild>
+								<a href="mailto:hello@accelr8.io">
+									Contact Us
+								</a>
+							</Button>
+						</div>
+					)}
 				</div>
 			</section>
 
 			{/* Map Overview (Placeholder) */}
-			<section className="py-20 bg-black">
+			<section className="py-20 bg-muted">
 				<div className="container mx-auto px-4">
 					<div className="text-center mb-12">
 						<h2 className="text-3xl font-bold mb-4">Our Locations</h2>
-						<p className="text-gray-400 max-w-2xl mx-auto">
+						<p className="text-muted-foreground max-w-2xl mx-auto">
 							Accelr8 houses are strategically located in tech hubs across the United States,
 							with plans to expand globally in the coming years.
 						</p>
 					</div>
 
 					{/* Map Placeholder */}
-					<div className="bg-gray-900 h-[500px] rounded-lg border border-gray-800 flex items-center justify-center">
+					<div className="bg-card h-[500px] rounded-lg border border-border flex items-center justify-center">
 						<div className="text-center">
-							<MapPin className="h-16 w-16 text-gray-700 mx-auto mb-4" />
-							<p className="text-gray-400 max-w-md mx-auto">
+							<MapPin className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+							<p className="text-muted-foreground max-w-md mx-auto">
 								Interactive map showing all Accelr8 house locations will be displayed here.
 							</p>
 						</div>
@@ -218,23 +254,23 @@ function HousesContent() {
 			</section>
 
 			{/* Call to Action */}
-			<section className="py-20 bg-gradient-to-b from-black to-blue-950">
+			<section className="py-20 bg-gradient-primary">
 				<div className="container mx-auto px-4">
 					<div className="max-w-4xl mx-auto text-center">
-						<h2 className="text-3xl md:text-5xl font-bold mb-6">
+						<h2 className="text-3xl md:text-5xl font-bold mb-6 text-primary-foreground">
 							Ready to Join the Community?
 						</h2>
-						<p className="text-xl text-gray-300 mb-8">
+						<p className="text-xl text-primary-foreground/80 mb-8">
 							Apply now to live alongside ambitious founders and builders in one of our houses.
 						</p>
 						<div className="flex flex-col sm:flex-row justify-center gap-4">
-							<Button asChild size="lg">
+							<Button asChild size="lg" variant="secondary">
 								<Link href="/apply">
 									Apply Now
 									<ArrowRight className="ml-2 h-4 w-4" />
 								</Link>
 							</Button>
-							<Button asChild variant="outline" size="lg">
+							<Button asChild variant="outline" size="lg" className="bg-white/20 hover:bg-white/30 text-white border-white/20">
 								<a href="mailto:hello@accelr8.io">
 									Contact Us
 								</a>

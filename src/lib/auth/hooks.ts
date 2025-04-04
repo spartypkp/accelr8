@@ -1,107 +1,110 @@
-'use client';
-
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
-import { isAdminUser } from '../auth-utils';
-import { useAuth } from './context';
-import { Permission, can } from './permissions';
-import { Resource } from './types';
-
-// Hook to check if user is authenticated
-export function useRequireAuth(redirectTo = '/login') {
-	const { user, isLoading } = useAuth();
-	const router = useRouter();
-
-	useEffect(() => {
-		if (!isLoading && !user) {
-			router.push(redirectTo);
-		}
-	}, [user, isLoading, router, redirectTo]);
-
-	return { user, isLoading };
-}
-
-// Hook to check if user is admin
-export function useRequireAdmin(redirectTo = '/dashboard') {
-	const { user, isLoading } = useAuth();
-	const router = useRouter();
-
-	// Use the isAdminUser utility function for consistent role checking
-	const isAdmin = isAdminUser(user);
-
-	useEffect(() => {
-		if (!isLoading && (!user || !isAdmin)) {
-			router.push(redirectTo);
-		}
-	}, [user, isLoading, isAdmin, router, redirectTo]);
-
-	return { user, isLoading, isAdmin };
-}
-
-// Hook for handling authentication redirects
-export function useAuthRedirect(onAuthenticatedPath = '/dashboard') {
-	const { user, isLoading } = useAuth();
-	const router = useRouter();
-	const pathname = usePathname();
-
-	useEffect(() => {
-		// Only redirect on auth pages when user is already authenticated
-		if (
-			!isLoading &&
-			user &&
-			(pathname.startsWith('/login') ||
-				pathname.startsWith('/register') ||
-				pathname.startsWith('/forgot-password'))
-		) {
-			router.push(onAuthenticatedPath);
-		}
-	}, [user, isLoading, router, pathname, onAuthenticatedPath]);
-
-	return { user, isLoading };
-}
+import { createClient } from '@/lib/supabase/client';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
+import { UserRole } from './routes-config';
 
 /**
- * Hook to check permission for a specific action with resource
- * For simple permission checks without resources, use context.hasPermission
- * 
- * Usage:
- * const canEditHouse = usePermission('manage_house', { id: 'house-123', type: 'house' });
+ * Simple auth hook for client components
  */
-export function usePermission(permission: Permission, resource?: Resource): boolean {
-	const { user, hasPermission } = useAuth();
+export function useAuth() {
+	const [user, setUser] = useState<any>(null);
+	const [isLoading, setIsLoading] = useState<boolean>(true);
+	const supabase = createClient();
+	const router = useRouter();
 
-	// If no resource, use the simpler hasPermission
-	if (!resource) {
-		return hasPermission(permission);
-	}
+	useEffect(() => {
+		// Get initial session
+		const getUser = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			setUser(user || null);
+			setIsLoading(false);
+		};
 
-	// Convert Supabase user to UserProfile format for resource checks
-	const userProfile = useMemo(() => {
-		if (!user) return null;
+		getUser();
 
-		return {
-			id: user.id,
-			email: user.email || '',
-			name: user.user_metadata?.name || '',
-			role: (user.user_metadata?.role || 'resident') as any,
-			profile: {
-				image: {
-					url: user.user_metadata?.avatar_url || '',
+		// Setup auth state change listener
+		const { data: { subscription } } = supabase.auth.onAuthStateChange(
+			(_event, session) => {
+				setUser(session?.user || null);
+				setIsLoading(false);
+			}
+		);
+
+		return () => {
+			subscription.unsubscribe();
+		};
+	}, [supabase.auth]);
+
+	const signIn = useCallback(async (email: string, password: string) => {
+		return supabase.auth.signInWithPassword({ email, password });
+	}, [supabase.auth]);
+
+	const signOut = useCallback(async () => {
+		await supabase.auth.signOut();
+		router.push('/login');
+	}, [supabase.auth, router]);
+
+	const signUp = useCallback(async (email: string, password: string) => {
+		return supabase.auth.signUp({
+			email,
+			password,
+			options: {
+				// Set default role for new users
+				data: {
+					role: 'resident'
 				}
 			}
-		};
-	}, [user]);
+		});
+	}, [supabase.auth]);
 
-	// Check permission using can helper
-	return useMemo(() => {
-		return can(userProfile, permission, resource);
-	}, [userProfile, permission, resource]);
+	const resetPassword = useCallback(async (email: string) => {
+		return supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: `${window.location.origin}/reset-password`
+		});
+	}, [supabase.auth]);
+
+	// Get user role from metadata
+	const userRole = user?.user_metadata?.role || 'resident';
+
+	// Helper functions
+	const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+	const isSuperAdmin = userRole === 'super_admin';
+
+	return {
+		user,
+		isLoading,
+		isAdmin,
+		isSuperAdmin,
+		userRole,
+		signIn,
+		signOut,
+		signUp,
+		resetPassword
+	};
 }
 
 /**
- * Hook to get all permissions for the current user
+ * Hook to require authentication
  */
-export function useUserPermissions(): Permission[] {
-	const { permissions } = useAuth();
-	return permissions;
+export function useRequireAuth(role?: UserRole) {
+	const { user, isLoading, userRole } = useAuth();
+	const router = useRouter();
+
+	useEffect(() => {
+		if (isLoading) return;
+
+		if (!user) {
+			router.push('/login');
+			return;
+		}
+
+		if (role) {
+			const roleHierarchy = { resident: 1, admin: 2, super_admin: 3 };
+			if (roleHierarchy[userRole] < roleHierarchy[role]) {
+				router.push('/dashboard');
+			}
+		}
+	}, [user, isLoading, role, userRole, router]);
+
+	return { user, isLoading };
 } 

@@ -250,10 +250,10 @@ function ApplicationPageContent() {
 	return (
 		<PublicLayout>
 			{/* Hero section */}
-			<section className="pt-36 pb-12 bg-gradient-to-b from-black to-gray-950">
+			<section className="pt-36 pb-12 bg-gradient-primary">
 				<div className="container mx-auto px-4 text-center">
-					<h1 className="text-3xl md:text-5xl font-bold mb-4">Apply to Join Accelr8</h1>
-					<p className="text-gray-300 max-w-2xl mx-auto text-lg">
+					<h1 className="text-3xl md:text-5xl font-bold mb-4 text-primary-foreground">Apply to Join Accelr8</h1>
+					<p className="text-primary-foreground/80 max-w-2xl mx-auto text-lg">
 						Join our community of founders, engineers, and innovators.
 						Complete the application below to start your journey.
 					</p>
@@ -261,42 +261,42 @@ function ApplicationPageContent() {
 			</section>
 
 			{/* Application Process */}
-			<section className="py-12 bg-gray-950">
+			<section className="py-12 bg-background">
 				<div className="container mx-auto px-4">
 					<div className="flex flex-wrap items-start">
 						{/* Left side - Application form */}
 						<div className="w-full lg:w-8/12 lg:pr-8 mb-8 lg:mb-0">
-							<div className="bg-gray-900 rounded-lg border border-gray-800 overflow-hidden">
+							<div className="bg-card rounded-lg border border-border overflow-hidden">
 								{/* Application Process Steps */}
-								<div className="border-b border-gray-800 px-4 py-3 bg-gray-900/50">
+								<div className="border-b border-border px-4 py-3 bg-card/50">
 									<div className="flex items-center justify-between">
 										<div className="hidden sm:flex items-center text-sm">
 											<div className="flex items-center">
-												<div className="h-6 w-6 rounded-full bg-blue-600 flex items-center justify-center">
-													<Check className="h-3 w-3 text-white" />
+												<div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+													<Check className="h-3 w-3 text-primary-foreground" />
 												</div>
 												<span className="ml-2 font-medium">Basic Info</span>
 											</div>
-											<ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
+											<ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
 											<div className="flex items-center">
-												<div className="h-6 w-6 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center">
-													<span className="text-xs font-medium text-gray-300">2</span>
+												<div className="h-6 w-6 rounded-full border border-border bg-card flex items-center justify-center">
+													<span className="text-xs font-medium text-muted-foreground">2</span>
 												</div>
-												<span className="ml-2 font-medium text-gray-400">Background</span>
+												<span className="ml-2 font-medium text-muted-foreground">Background</span>
 											</div>
-											<ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
+											<ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
 											<div className="flex items-center">
-												<div className="h-6 w-6 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center">
-													<span className="text-xs font-medium text-gray-300">3</span>
+												<div className="h-6 w-6 rounded-full border border-border bg-card flex items-center justify-center">
+													<span className="text-xs font-medium text-muted-foreground">3</span>
 												</div>
-												<span className="ml-2 font-medium text-gray-400">Additional Info</span>
+												<span className="ml-2 font-medium text-muted-foreground">Additional Info</span>
 											</div>
-											<ChevronRight className="h-4 w-4 mx-2 text-gray-400" />
+											<ChevronRight className="h-4 w-4 mx-2 text-muted-foreground" />
 											<div className="flex items-center">
-												<div className="h-6 w-6 rounded-full border border-gray-600 bg-gray-800 flex items-center justify-center">
-													<span className="text-xs font-medium text-gray-300">4</span>
+												<div className="h-6 w-6 rounded-full border border-border bg-card flex items-center justify-center">
+													<span className="text-xs font-medium text-muted-foreground">4</span>
 												</div>
-												<span className="ml-2 font-medium text-gray-400">Review</span>
+												<span className="ml-2 font-medium text-muted-foreground">Review</span>
 											</div>
 										</div>
 										<div className="sm:hidden text-center w-full">
@@ -315,10 +315,11 @@ function ApplicationPageContent() {
 												<TabsTrigger value="background">Background</TabsTrigger>
 												<TabsTrigger value="additional">Additional Info</TabsTrigger>
 											</TabsList>
+
 											<TabsContent value="personal" className="space-y-6 p-6">
 												<div>
 													<h2 className="text-2xl font-bold mb-2">Basic Information</h2>
-													<p className="text-gray-400 mb-6">Let's start with some basic details about you.</p>
+													<p className="text-muted-foreground mb-6">Let's start with some basic details about you.</p>
 
 													<div className="space-y-4">
 														<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -327,7 +328,7 @@ function ApplicationPageContent() {
 																name="personalInfo.firstName"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>First Name <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Input placeholder="Your first name" {...field} />
 																		</FormControl>
@@ -339,7 +340,7 @@ function ApplicationPageContent() {
 																name="personalInfo.lastName"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>Last Name <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Input placeholder="Your last name" {...field} />
 																		</FormControl>
@@ -353,11 +354,11 @@ function ApplicationPageContent() {
 															name="personalInfo.email"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Email <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Email <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Input placeholder="you@example.com" type="email" {...field} />
 																	</FormControl>
-																	<p className="text-xs text-gray-400">We'll use this email for all communications.</p>
+																	<p className="text-xs text-muted-foreground">We'll use this email for all communications.</p>
 																</FormItem>
 															)}
 														/>
@@ -367,7 +368,7 @@ function ApplicationPageContent() {
 															name="personalInfo.phone"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Phone Number <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Phone Number <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Input placeholder="+1 (555) 123-4567" {...field} />
 																	</FormControl>
@@ -380,7 +381,7 @@ function ApplicationPageContent() {
 															name="personalInfo.dob"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Date of Birth <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Date of Birth <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Popover>
 																			<PopoverTrigger>
@@ -402,7 +403,7 @@ function ApplicationPageContent() {
 																			</PopoverContent>
 																		</Popover>
 																	</FormControl>
-																	<p className="text-xs text-gray-400">You must be at least 18 years old.</p>
+																	<p className="text-xs text-muted-foreground">You must be at least 18 years old.</p>
 																</FormItem>
 															)}
 														/>
@@ -434,7 +435,7 @@ function ApplicationPageContent() {
 																name="preferences.location"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>Preferred Location <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>Preferred Location <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Select onValueChange={field.onChange} defaultValue={field.value}>
 																				<FormControl>
@@ -458,7 +459,7 @@ function ApplicationPageContent() {
 															name="preferences.roomType"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Room Preference <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Room Preference <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Select onValueChange={field.onChange} defaultValue={field.value}>
 																			<FormControl>
@@ -482,7 +483,7 @@ function ApplicationPageContent() {
 															name="preferences.moveInDate"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Desired Move-In Date <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Desired Move-In Date <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Popover>
 																			<PopoverTrigger>
@@ -513,7 +514,7 @@ function ApplicationPageContent() {
 															name="preferences.duration"
 															render={({ field }) => (
 																<FormItem className="space-y-2">
-																	<FormLabel>Expected Length of Stay <span className="text-red-500">*</span></FormLabel>
+																	<FormLabel>Expected Length of Stay <span className="text-destructive">*</span></FormLabel>
 																	<FormControl>
 																		<Select onValueChange={field.onChange} defaultValue={field.value}>
 																			<FormControl>
@@ -560,7 +561,7 @@ function ApplicationPageContent() {
 																name="background.role"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>What best describes your current role? <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>What best describes your current role? <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Select onValueChange={field.onChange} defaultValue={field.value}>
 																				<SelectTrigger className="w-full">
@@ -589,7 +590,7 @@ function ApplicationPageContent() {
 																name="background.company"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>Current Company / Project <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>Current Company / Project <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Input placeholder="Company or project name" {...field} />
 																		</FormControl>
@@ -649,7 +650,7 @@ function ApplicationPageContent() {
 																name="background.workDescription"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>Tell us a bit about what you're working on <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>Tell us a bit about what you're working on <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Textarea
 																				placeholder="Describe your current project, company, or professional interests"
@@ -668,7 +669,7 @@ function ApplicationPageContent() {
 																name="background.goals"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>What are you hoping to get out of living at Accelr8? <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>What are you hoping to get out of living at Accelr8? <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Textarea
 																				placeholder="Tell us about your goals and what you're looking for in a community"
@@ -708,7 +709,7 @@ function ApplicationPageContent() {
 																name="additional.howHeard"
 																render={({ field }) => (
 																	<FormItem className="space-y-2">
-																		<FormLabel>How did you hear about Accelr8? <span className="text-red-500">*</span></FormLabel>
+																		<FormLabel>How did you hear about Accelr8? <span className="text-destructive">*</span></FormLabel>
 																		<FormControl>
 																			<Select onValueChange={field.onChange} defaultValue={field.value}>
 																				<SelectTrigger className="w-full">
@@ -812,8 +813,8 @@ function ApplicationPageContent() {
 																				/>
 																			</FormControl>
 																			<FormLabel htmlFor="terms" className="font-normal text-sm cursor-pointer">
-																				I agree to the <Link href="/terms" className="text-blue-400 hover:text-blue-300">Terms of Service</Link> and <Link href="/privacy" className="text-blue-400 hover:text-blue-300">Privacy Policy</Link>.
-																				<span className="text-red-500"> *</span>
+																				I agree to the <Link href="/terms" className="text-primary hover:text-primary/80">Terms of Service</Link> and <Link href="/privacy" className="text-primary hover:text-primary/80">Privacy Policy</Link>.
+																				<span className="text-destructive"> *</span>
 																			</FormLabel>
 																		</FormItem>
 																	)}
@@ -842,39 +843,39 @@ function ApplicationPageContent() {
 													</div>
 
 													<div className="space-y-6">
-														<div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+														<div className="bg-muted/50 p-4 rounded-lg border border-border">
 															<h3 className="font-semibold mb-2">Basic Information</h3>
 															<div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
 																<div>
-																	<p className="text-gray-400">Name:</p>
+																	<p className="text-muted-foreground">Name:</p>
 																	<p>John Smith</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Email:</p>
+																	<p className="text-muted-foreground">Email:</p>
 																	<p>john@example.com</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Phone:</p>
+																	<p className="text-muted-foreground">Phone:</p>
 																	<p>+1 (555) 123-4567</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Date of Birth:</p>
+																	<p className="text-muted-foreground">Date of Birth:</p>
 																	<p>March 15, 1990</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Preferred Location:</p>
+																	<p className="text-muted-foreground">Preferred Location:</p>
 																	<p>San Francisco - Nob Hill</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Room Preference:</p>
+																	<p className="text-muted-foreground">Room Preference:</p>
 																	<p>Shared Room</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Move-in Date:</p>
+																	<p className="text-muted-foreground">Move-in Date:</p>
 																	<p>December 1, 2023</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Length of Stay:</p>
+																	<p className="text-muted-foreground">Length of Stay:</p>
 																	<p>3 months</p>
 																</div>
 															</div>
@@ -883,23 +884,23 @@ function ApplicationPageContent() {
 															</Button>
 														</div>
 
-														<div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+														<div className="bg-muted/50 p-4 rounded-lg border border-border">
 															<h3 className="font-semibold mb-2">Professional Background</h3>
 															<div className="space-y-2 text-sm">
 																<div>
-																	<p className="text-gray-400">Current Role:</p>
+																	<p className="text-muted-foreground">Current Role:</p>
 																	<p>Software Engineer</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Company/Project:</p>
+																	<p className="text-muted-foreground">Company/Project:</p>
 																	<p>TechStartup Inc.</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Social Profiles:</p>
+																	<p className="text-muted-foreground">Social Profiles:</p>
 																	<p>LinkedIn, Personal Website, GitHub</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">About Your Work:</p>
+																	<p className="text-muted-foreground">About Your Work:</p>
 																	<p className="line-clamp-2">Building a SaaS platform for small businesses that helps with customer relationship management and sales automation...</p>
 																</div>
 															</div>
@@ -908,19 +909,19 @@ function ApplicationPageContent() {
 															</Button>
 														</div>
 
-														<div className="bg-gray-800/50 p-4 rounded-lg border border-gray-700">
+														<div className="bg-muted/50 p-4 rounded-lg border border-border">
 															<h3 className="font-semibold mb-2">Additional Information</h3>
 															<div className="space-y-2 text-sm">
 																<div>
-																	<p className="text-gray-400">How you heard about us:</p>
+																	<p className="text-muted-foreground">How you heard about us:</p>
 																	<p>Referred by a friend</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Referrer:</p>
+																	<p className="text-muted-foreground">Referrer:</p>
 																	<p>Sarah Johnson</p>
 																</div>
 																<div>
-																	<p className="text-gray-400">Agreed to Terms:</p>
+																	<p className="text-muted-foreground">Agreed to Terms:</p>
 																	<p>Yes</p>
 																</div>
 															</div>
@@ -954,42 +955,42 @@ function ApplicationPageContent() {
 									</CardHeader>
 									<CardContent className="space-y-4">
 										<div className="flex items-start">
-											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
+											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-3">
 												<User className="h-4 w-4" />
 											</div>
 											<div>
 												<h4 className="font-medium">1. Submit Application</h4>
-												<p className="text-sm text-gray-400">Complete this form with your information and preferences.</p>
+												<p className="text-sm text-muted-foreground">Complete this form with your information and preferences.</p>
 											</div>
 										</div>
 
 										<div className="flex items-start">
-											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
+											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-3">
 												<Clock className="h-4 w-4" />
 											</div>
 											<div>
 												<h4 className="font-medium">2. Application Review</h4>
-												<p className="text-sm text-gray-400">We'll review your application within 2-3 business days.</p>
+												<p className="text-sm text-muted-foreground">We'll review your application within 2-3 business days.</p>
 											</div>
 										</div>
 
 										<div className="flex items-start">
-											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
+											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-3">
 												<CalendarCheck className="h-4 w-4" />
 											</div>
 											<div>
 												<h4 className="font-medium">3. Interview or Tour</h4>
-												<p className="text-sm text-gray-400">If there's a mutual fit, we'll schedule a video call or in-person tour.</p>
+												<p className="text-sm text-muted-foreground">If there's a mutual fit, we'll schedule a video call or in-person tour.</p>
 											</div>
 										</div>
 
 										<div className="flex items-start">
-											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 mr-3">
+											<div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary mr-3">
 												<Home className="h-4 w-4" />
 											</div>
 											<div>
 												<h4 className="font-medium">4. Welcome to Accelr8!</h4>
-												<p className="text-sm text-gray-400">Once approved, you'll receive move-in details and community onboarding.</p>
+												<p className="text-sm text-muted-foreground">Once approved, you'll receive move-in details and community onboarding.</p>
 											</div>
 										</div>
 									</CardContent>
@@ -1001,13 +1002,13 @@ function ApplicationPageContent() {
 										<CardDescription>San Francisco - Nob Hill</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-2">
-										<div className="bg-gray-800 rounded-md aspect-video flex items-center justify-center">
+										<div className="bg-muted rounded-md aspect-video flex items-center justify-center">
 											{/* Replace with actual house image */}
-											<Building className="h-12 w-12 text-gray-600" />
+											<Building className="h-12 w-12 text-muted-foreground" />
 										</div>
 
 										<div className="flex items-center text-sm">
-											<MapPin className="h-4 w-4 mr-2 text-gray-400" />
+											<MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
 											<span>1551 Larkin Street, San Francisco, CA 94109</span>
 										</div>
 

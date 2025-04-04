@@ -63,9 +63,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 	];
 
 	return (
-		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+		<div className="min-h-screen bg-background">
 			{/* Top navigation */}
-			<header className="bg-white dark:bg-gray-800 shadow-sm fixed top-0 inset-x-0 z-30">
+			<header className="bg-background border-b border-border shadow-sm fixed top-0 inset-x-0 z-30">
 				<div className="flex items-center justify-between h-16 px-4">
 					{/* Left side - Logo and Menu */}
 					<div className="flex items-center">
@@ -80,7 +80,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 						</Button>
 
 						<Link href={`/dashboard/${houseId}`} className="flex items-center">
-							<span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+							<span className="text-xl font-bold bg-gradient-primary text-transparent bg-clip-text">
 								Accelr8
 							</span>
 						</Link>
@@ -173,7 +173,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
 			{/* Sidebar - desktop version */}
 			<div className="hidden md:fixed md:inset-y-0 md:flex md:w-60 md:flex-col z-20">
-				<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-16">
+				<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card border-r border-border pt-16">
 					<nav className="flex flex-1 flex-col px-2 py-4">
 						<ul className="space-y-1">
 							{navItems.map((item) => (
@@ -183,15 +183,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 										className={cn(
 											"group flex items-center px-2 py-2 text-sm font-medium rounded-md",
 											pathname === item.href || (item.href !== `/dashboard/${houseId}` && pathname?.startsWith(item.href))
-												? "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400"
-												: "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+												? "bg-muted text-primary"
+												: "text-foreground hover:bg-muted/50"
 										)}
 									>
 										<div className={cn(
 											"mr-3",
 											pathname === item.href || (item.href !== `/dashboard/${houseId}` && pathname?.startsWith(item.href))
-												? "text-blue-600 dark:text-blue-400"
-												: "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+												? "text-primary"
+												: "text-muted-foreground group-hover:text-foreground"
 										)}>
 											{item.icon}
 										</div>
@@ -202,7 +202,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 						</ul>
 					</nav>
 
-					<div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+					<div className="px-3 py-4 border-t border-border">
 						<div className="flex items-center">
 							<div className="flex-shrink-0">
 								<Avatar className="h-8 w-8">
@@ -213,10 +213,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 								</Avatar>
 							</div>
 							<div className="ml-3">
-								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<p className="text-sm font-medium text-foreground">
 									{user?.email?.split('@')[0] || 'Resident'}
 								</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+								<p className="text-xs text-muted-foreground truncate">
 									{user?.email || 'resident@accelr8.io'}
 								</p>
 							</div>
@@ -229,9 +229,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
 				<SheetContent side="left" className="w-60 p-0">
 					<div className="flex h-full flex-col">
-						<div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 h-16 px-4">
+						<div className="flex items-center justify-between border-b border-border h-16 px-4">
 							<Link href={`/dashboard/${houseId}`} className="flex items-center" onClick={() => setSidebarOpen(false)}>
-								<span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+								<span className="text-xl font-bold bg-gradient-primary text-transparent bg-clip-text">
 									Accelr8
 								</span>
 							</Link>
@@ -246,7 +246,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 						</div>
 
 						{/* House selector - mobile */}
-						<div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+						<div className="px-4 py-2 border-b border-border">
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" className="w-full justify-start">
@@ -283,16 +283,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 											className={cn(
 												"group flex items-center px-2 py-2 text-sm font-medium rounded-md",
 												pathname === item.href || (item.href !== `/dashboard/${houseId}` && pathname?.startsWith(item.href))
-													? "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400"
-													: "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+													? "bg-muted text-primary"
+													: "text-foreground hover:bg-muted/50"
 											)}
 											onClick={() => setSidebarOpen(false)}
 										>
 											<div className={cn(
 												"mr-3",
 												pathname === item.href || (item.href !== `/dashboard/${houseId}` && pathname?.startsWith(item.href))
-													? "text-blue-600 dark:text-blue-400"
-													: "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+													? "text-primary"
+													: "text-muted-foreground group-hover:text-foreground"
 											)}>
 												{item.icon}
 											</div>
@@ -303,7 +303,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 							</ul>
 						</nav>
 
-						<div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+						<div className="px-3 py-4 border-t border-border">
 							<Button variant="outline" size="sm" className="w-full" onClick={() => signOut && signOut()}>
 								<LogOut className="h-4 w-4 mr-2" />
 								Log out

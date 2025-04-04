@@ -10,11 +10,11 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-gray-950 to-blue-950 flex flex-col items-center justify-center p-4">
+		<div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
 			<div className="mb-8 w-full max-w-md">
 				<Link
 					href="/"
-					className="flex items-center text-sm text-gray-400 hover:text-white transition-colors"
+					className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
 				>
 					<ArrowLeft className="h-4 w-4 mr-2" />
 					Back to home
@@ -23,10 +23,10 @@ export default function LoginPage() {
 
 			<div className="w-full max-w-md space-y-8">
 				<div className="text-center">
-					<h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
+					<h1 className="text-3xl font-bold gradient-text">
 						Accelr8
 					</h1>
-					<p className="text-gray-400 mt-2">Accelerating Innovation</p>
+					<p className="text-muted-foreground mt-2">Accelerating Innovation</p>
 				</div>
 
 				<SignInForm />

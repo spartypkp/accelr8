@@ -12,23 +12,21 @@ const handleQueryError = (error: any, context: string) => {
  * Get the active residency for a user
  */
 export async function getUserActiveResidency(userId: string) {
-	try {
-		const supabase = createClient();
-		const { data, error } = await supabase
-			.from("residencies")
-			.select("sanity_house_id")
-			.eq("user_id", userId)
-			.eq("status", "active")
-			.single();
+	const supabase = await createClient();
 
-		if (error) {
-			return handleQueryError(error, 'getUserActiveResidency');
-		}
+	const { data, error } = await supabase
+		.from('residencies')
+		.select('*')
+		.eq('user_id', userId)
+		.eq('status', 'active')
+		.maybeSingle();
 
-		return data;
-	} catch (error) {
-		return handleQueryError(error, 'getUserActiveResidency');
+	if (error) {
+		console.error('Error in getUserActiveResidency:', error);
+		return null;
 	}
+
+	return data;
 }
 
 /**

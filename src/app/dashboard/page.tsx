@@ -1,17 +1,20 @@
+import { Skeleton } from "@/components/ui/skeleton";
 
-export default async function DashboardHomePage() {
-	// Redirecting will be handled by layout.tsx
-	// This page serves as a fallback for any user that hasn't been redirected by the layout
-
-	// Display a message for users landing on this page
+export default function DashboardPage() {
+	// This page will almost never be seen as middleware will redirect
+	// However, we provide a fallback UI just in case
 	return (
 		<div className="container mx-auto py-8">
-			<h2 className="text-2xl font-bold mb-4">Welcome to Accelr8</h2>
-			<p className="text-gray-500 mb-6">
-				Redirecting you to the appropriate dashboard...
+			<h2 className="text-2xl font-bold mb-4">Redirecting to your dashboard...</h2>
+			<p className="text-muted-foreground mb-6">
+				You'll be redirected to your specific dashboard momentarily.
 			</p>
-			<div className="animate-pulse bg-gray-200 h-4 w-48 rounded mb-2"></div>
-			<div className="animate-pulse bg-gray-200 h-4 w-64 rounded"></div>
+
+			<div className="space-y-4">
+				<Skeleton className="h-4 w-48" />
+				<Skeleton className="h-4 w-64" />
+				<Skeleton className="h-4 w-32" />
+			</div>
 		</div>
 	);
 } 

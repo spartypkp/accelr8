@@ -1,17 +1,13 @@
-/**
- * Auth module exports
- * This file provides a convenient way to import auth functionality
- */
+// Export everything from the auth system
 
-// Export permission system
-export * from './permissions';
+// Client-side context (default export)
+export { AuthProvider } from './context';
 
-// Export types
-export * from './types';
-
-// Export context and hooks for client components
-export { AuthProvider, useAuth } from './context';
+// Client-side hooks
 export * from './hooks';
 
-// Re-export the config functions for middleware
-export { extractParams, getRouteConfig } from './config';
+// Server-side utilities
+export * from './auth-utils';
+
+// Route configuration
+export * from './routes-config';

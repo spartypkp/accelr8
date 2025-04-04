@@ -52,9 +52,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 	];
 
 	return (
-		<div className="min-h-screen bg-gray-100 dark:bg-gray-900">
+		<div className="min-h-screen bg-background">
 			{/* Top navigation */}
-			<header className="bg-white dark:bg-gray-800 shadow-sm fixed top-0 inset-x-0 z-30">
+			<header className="bg-background border-b border-border shadow-sm fixed top-0 inset-x-0 z-30">
 				<div className="flex items-center justify-between h-16 px-4">
 					{/* Left side - Logo and Menu */}
 					<div className="flex items-center">
@@ -69,8 +69,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 						</Button>
 
 						<Link href="/admin" className="flex items-center">
-							<span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
-								Accelr8 <span className="text-sm font-normal text-gray-500 dark:text-gray-400">Admin</span>
+							<span className="text-xl font-bold bg-gradient-primary text-transparent bg-clip-text">
+								Accelr8 <span className="text-sm font-normal text-muted-foreground">Admin</span>
 							</span>
 						</Link>
 					</div>
@@ -134,7 +134,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
 			{/* Sidebar - desktop version */}
 			<div className="hidden md:fixed md:inset-y-0 md:flex md:w-60 md:flex-col z-20">
-				<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 pt-16">
+				<div className="flex grow flex-col gap-y-5 overflow-y-auto bg-card border-r border-border pt-16">
 					<nav className="flex flex-1 flex-col px-2 py-4">
 						<ul className="space-y-1">
 							{navItems.map((item) => (
@@ -144,15 +144,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 										className={cn(
 											"group flex items-center px-2 py-2 text-sm font-medium rounded-md",
 											pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href))
-												? "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400"
-												: "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+												? "bg-muted text-primary"
+												: "text-foreground hover:bg-muted/50"
 										)}
 									>
 										<div className={cn(
 											"mr-3",
 											pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href))
-												? "text-blue-600 dark:text-blue-400"
-												: "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+												? "text-primary"
+												: "text-muted-foreground group-hover:text-foreground"
 										)}>
 											{item.icon}
 										</div>
@@ -163,7 +163,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 						</ul>
 					</nav>
 
-					<div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+					<div className="px-3 py-4 border-t border-border">
 						<div className="flex items-center">
 							<div className="flex-shrink-0">
 								<Avatar className="h-8 w-8">
@@ -174,10 +174,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 								</Avatar>
 							</div>
 							<div className="ml-3">
-								<p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+								<p className="text-sm font-medium text-foreground">
 									{user?.email?.split('@')[0] || 'Admin User'}
 								</p>
-								<p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+								<p className="text-xs text-muted-foreground truncate">
 									{user?.email || 'admin@accelr8.io'}
 								</p>
 							</div>
@@ -190,10 +190,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
 				<SheetContent side="left" className="w-60 p-0">
 					<div className="flex h-full flex-col">
-						<div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 h-16 px-4">
+						<div className="flex items-center justify-between border-b border-border h-16 px-4">
 							<Link href="/admin" className="flex items-center" onClick={() => setSidebarOpen(false)}>
-								<span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 text-transparent bg-clip-text">
-									Accelr8 <span className="text-sm font-normal text-gray-500 dark:text-gray-400">Admin</span>
+								<span className="text-xl font-bold bg-gradient-primary text-transparent bg-clip-text">
+									Accelr8 <span className="text-sm font-normal text-muted-foreground">Admin</span>
 								</span>
 							</Link>
 							<Button
@@ -215,16 +215,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 											className={cn(
 												"group flex items-center px-2 py-2 text-sm font-medium rounded-md",
 												pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href))
-													? "bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400"
-													: "text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+													? "bg-muted text-primary"
+													: "text-foreground hover:bg-muted/50"
 											)}
 											onClick={() => setSidebarOpen(false)}
 										>
 											<div className={cn(
 												"mr-3",
 												pathname === item.href || (item.href !== '/admin' && pathname?.startsWith(item.href))
-													? "text-blue-600 dark:text-blue-400"
-													: "text-gray-500 dark:text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300"
+													? "text-primary"
+													: "text-muted-foreground group-hover:text-foreground"
 											)}>
 												{item.icon}
 											</div>
@@ -235,7 +235,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 							</ul>
 						</nav>
 
-						<div className="px-3 py-4 border-t border-gray-200 dark:border-gray-700">
+						<div className="px-3 py-4 border-t border-border">
 							<Button variant="outline" size="sm" className="w-full" onClick={() => signOut && signOut()}>
 								<LogOut className="h-4 w-4 mr-2" />
 								Log out

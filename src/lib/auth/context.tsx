@@ -1,187 +1,118 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
-import { Session, User } from '@supabase/supabase-js';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Permission, getPermissions } from './permissions';
+import { useRouter } from 'next/navigation';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { UserRole } from './routes-config';
 
-type AuthContextType = {
-	user: User | null;
-	session: Session | null;
+// Define context interface
+interface AuthContextType {
+	user: any | null;
 	isLoading: boolean;
-	// Add permissions functions
-	permissions: Permission[];
-	hasPermission: (permission: Permission) => boolean;
-	// Auth methods
-	signIn: (email: string, password: string) => Promise<{ error: any; }>;
-	signUp: (email: string, password: string) => Promise<{ error: any; }>;
+	userRole: UserRole;
+	isAdmin: boolean;
+	isSuperAdmin: boolean;
+	signIn: (email: string, password: string) => Promise<any>;
 	signOut: () => Promise<void>;
-	resetPassword: (email: string) => Promise<{ error: any; }>;
-};
+	signUp: (email: string, password: string) => Promise<any>;
+	resetPassword: (email: string) => Promise<any>;
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create context with default values
+const AuthContext = createContext<AuthContextType>({
+	user: null,
+	isLoading: true,
+	userRole: 'resident',
+	isAdmin: false,
+	isSuperAdmin: false,
+	signIn: () => Promise.resolve({}),
+	signOut: () => Promise.resolve(),
+	signUp: () => Promise.resolve({}),
+	resetPassword: () => Promise.resolve({})
+});
 
+// Custom hook to use auth context
+export const useAuth = () => useContext(AuthContext);
+
+// Auth provider component
 export function AuthProvider({ children }: { children: React.ReactNode; }) {
-	const [user, setUser] = useState<User | null>(null);
-	const [session, setSession] = useState<Session | null>(null);
+	const [user, setUser] = useState<any>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const supabase = createClient();
-
-	// Get permissions for the current user
-	const permissions = useMemo<Permission[]>(() => {
-		if (!user?.user_metadata?.role) return [];
-		return getPermissions(user.user_metadata.role);
-	}, [user]);
-
-	// Check if user has a permission
-	const hasPermission = (permission: Permission): boolean => {
-		return permissions.includes(permission);
-	};
+	const router = useRouter();
 
 	useEffect(() => {
-		const getSession = async () => {
-			const { data: { session }, error } = await supabase.auth.getSession();
-			if (error) {
-				console.error('Error fetching session:', error);
-			}
-
-			if (session) {
-				setSession(session);
-				setUser(session.user);
-
-				// Fetch user role from accelr8_users table
-				const { data: userProfile } = await supabase
-					.from('accelr8_users')
-					.select('role')
-					.eq('id', session.user.id)
-					.single();
-
-				// Update user with role from database
-				if (userProfile?.role) {
-					const updatedUser = {
-						...session.user,
-						user_metadata: {
-							...session.user.user_metadata,
-							role: userProfile.role
-						}
-					};
-					setUser(updatedUser);
-				}
-			}
-
+		// Function to get and set the user
+		const getUser = async () => {
+			const { data: { user } } = await supabase.auth.getUser();
+			setUser(user || null);
 			setIsLoading(false);
 		};
 
-		getSession();
+		// Get initial user
+		getUser();
 
+		// Listen for auth state changes
 		const { data: { subscription } } = supabase.auth.onAuthStateChange(
 			async (_event, session) => {
-				setSession(session);
-
-				if (session?.user) {
-					// Fetch user role from accelr8_users table on auth changes
-					const { data: userProfile } = await supabase
-						.from('accelr8_users')
-						.select('role')
-						.eq('id', session.user.id)
-						.single();
-
-					// Update user with role from database
-					if (userProfile?.role) {
-						const updatedUser = {
-							...session.user,
-							user_metadata: {
-								...session.user.user_metadata,
-								role: userProfile.role
-							}
-						};
-						setUser(updatedUser);
-					} else {
-						setUser(session.user);
-					}
-				} else {
-					setUser(null);
-				}
-
+				setUser(session?.user || null);
 				setIsLoading(false);
 			}
 		);
 
+		// Cleanup subscription
 		return () => {
 			subscription.unsubscribe();
 		};
-	}, []);
+	}, [supabase.auth]);
 
+	// Auth methods
 	const signIn = async (email: string, password: string) => {
-		const { data, error } = await supabase.auth.signInWithPassword({
-			email,
-			password,
-		});
-
-		if (!error && data.user) {
-			// Fetch user role from accelr8_users table
-			const { data: userProfile } = await supabase
-				.from('accelr8_users')
-				.select('role')
-				.eq('id', data.user.id)
-				.single();
-
-			// Update user with role from database
-			if (userProfile?.role) {
-				const updatedUser = {
-					...data.user,
-					user_metadata: {
-						...data.user.user_metadata,
-						role: userProfile.role
-					}
-				};
-				setUser(updatedUser);
-			}
-		}
-
-		return { error };
-	};
-
-	const signUp = async (email: string, password: string) => {
-		const { error } = await supabase.auth.signUp({
-			email,
-			password,
-		});
-		return { error };
+		return supabase.auth.signInWithPassword({ email, password });
 	};
 
 	const signOut = async () => {
 		await supabase.auth.signOut();
+		router.push('/login');
+	};
+
+	const signUp = async (email: string, password: string) => {
+		return supabase.auth.signUp({
+			email,
+			password,
+			options: {
+				// Set default role for new users
+				data: {
+					role: 'resident'
+				}
+			}
+		});
 	};
 
 	const resetPassword = async (email: string) => {
-		const { error } = await supabase.auth.resetPasswordForEmail(email, {
-			redirectTo: `${window.location.origin}/auth/reset-password`,
+		return supabase.auth.resetPasswordForEmail(email, {
+			redirectTo: `${window.location.origin}/reset-password`
 		});
-		return { error };
 	};
+
+	// Get user role from metadata
+	const userRole = (user?.user_metadata?.role || 'resident') as UserRole;
+
+	// Derived values
+	const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+	const isSuperAdmin = userRole === 'super_admin';
 
 	const value = {
 		user,
-		session,
 		isLoading,
-		// Permissions functions
-		permissions,
-		hasPermission,
-		// Auth methods
+		userRole,
+		isAdmin,
+		isSuperAdmin,
 		signIn,
-		signUp,
 		signOut,
-		resetPassword,
+		signUp,
+		resetPassword
 	};
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-	const context = useContext(AuthContext);
-	if (context === undefined) {
-		throw new Error('useAuth must be used within an AuthProvider');
-	}
-	return context;
 } 

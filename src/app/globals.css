@@ -3,156 +3,138 @@
 @tailwind utilities;
 
 :root {
-  /* Dark mode theme - all values set for consistent dark appearance */
-  --background: 0 0% 0%;
-  /* Pure black */
-  --foreground: 220 10% 98%;
-  /* Nearly white with slight blue tint */
+  /* Light mode theme with white backgrounds and vibrant blue/purple accents */
+  --background: 0 0% 100%;
+  /* Pure white */
+  --foreground: 230 15% 15%;
+  /* Dark blue-gray for text */
 
-  --card: 230 15% 5%;
-  /* Very dark blue-black for cards */
-  --card-foreground: 220 10% 98%;
+  --card: 210 40% 98%;
+  /* Very light blue-white for cards */
+  --card-foreground: 230 15% 15%;
 
-  --popover: 230 15% 5%;
-  --popover-foreground: 220 10% 98%;
+  --popover: 210 40% 98%;
+  --popover-foreground: 230 15% 15%;
 
-  /* Electric blue primary */
-  --primary: 230 100% 60%;
-  --primary-foreground: 220 10% 98%;
+  /* Electric blue primary - keeping vibrant for accents */
+  --primary: 230 100% 55%;
+  --primary-foreground: 0 0% 100%;
 
-  /* Vibrant purple secondary */
-  --secondary: 280 100% 60%;
-  --secondary-foreground: 220 10% 98%;
+  /* Vibrant purple secondary - keeping vibrant for accents */
+  --secondary: 280 95% 60%;
+  --secondary-foreground: 0 0% 100%;
 
   /* Muted elements */
-  --muted: 230 20% 15%;
-  --muted-foreground: 220 10% 70%;
+  --muted: 210 20% 95%;
+  --muted-foreground: 230 20% 40%;
 
   /* Subtle accents */
-  --accent: 280 20% 15%;
-  --accent-foreground: 220 10% 98%;
+  --accent: 280 20% 95%;
+  --accent-foreground: 230 15% 15%;
 
   /* Destructive/error elements */
   --destructive: 0 100% 65%;
   /* Bright red */
-  --destructive-foreground: 220 10% 98%;
+  --destructive-foreground: 0 0% 100%;
 
   /* Success elements */
-  --success: 160 100% 40%;
+  --success: 160 80% 40%;
   /* Green */
-  --success-foreground: 220 10% 98%;
+  --success-foreground: 0 0% 100%;
 
   /* Warning elements */
-  --warning: 40 100% 60%;
+  --warning: 38 95% 60%;
   /* Amber/yellow */
-  --warning-foreground: 220 10% 10%;
+  --warning-foreground: 0 0% 10%;
 
   /* Borders and inputs */
-  --border: 230 25% 15%;
-  --input: 230 25% 15%;
+  --border: 230 15% 90%;
+  --input: 230 15% 90%;
   --ring: 230 70% 50%;
 
-  /* Charts - blue to purple gradient palette */
-  --chart-1: 230 100% 60%;
+  /* Charts - same vibrant blue to purple gradient palette */
+  --chart-1: 230 100% 55%;
   /* Electric blue */
-  --chart-2: 250 100% 60%;
+  --chart-2: 250 100% 55%;
   /* Blue-purple */
-  --chart-3: 270 100% 60%;
+  --chart-3: 270 100% 55%;
   /* Purple */
-  --chart-4: 290 100% 60%;
+  --chart-4: 290 100% 55%;
   /* Purple-pink */
-  --chart-5: 310 100% 60%;
+  --chart-5: 310 100% 55%;
   /* Pink-purple */
 
-  /* Glow effects */
-  --glow-blue: 0 0 20px hsl(230 100% 60% / 0.5), 0 0 40px hsl(230 100% 60% / 0.3);
-  --glow-purple: 0 0 20px hsl(280 100% 60% / 0.5), 0 0 40px hsl(280 100% 60% / 0.3);
+  /* Glow effects - keeping vibrant */
+  --glow-blue: 0 0 20px hsl(230 100% 55% / 0.5), 0 0 40px hsl(230 100% 55% / 0.3);
+  --glow-purple: 0 0 20px hsl(280 95% 60% / 0.5), 0 0 40px hsl(280 95% 60% / 0.3);
 
   /* Border radius */
   --radius: 0.75rem;
 
   /* Sidebar specific vars */
-  --sidebar: 230 15% 5%;
-  --sidebar-foreground: 220 10% 98%;
-  --sidebar-muted: 230 20% 15%;
-  --sidebar-muted-foreground: 220 10% 70%;
-  --sidebar-accent: 280 20% 15%;
-  --sidebar-accent-foreground: 220 10% 98%;
-  --sidebar-border: 230 25% 15%;
+  --sidebar: 210 40% 98%;
+  --sidebar-foreground: 230 15% 15%;
+  --sidebar-muted: 210 20% 95%;
+  --sidebar-muted-foreground: 230 20% 40%;
+  --sidebar-accent: 280 20% 95%;
+  --sidebar-accent-foreground: 230 15% 15%;
+  --sidebar-border: 230 15% 90%;
   --sidebar-ring: 230 70% 50%;
 }
 
-/* Always enforce dark mode for consistent appearance */
-.dark,
-:root {
-  --background: 0 0% 0%;
-  /* Pure black */
-  --foreground: 220 10% 98%;
-  /* Nearly white with slight blue tint */
+/* Removing the dark mode forced override to use the light theme defined above */
+.dark {
+  --background: 230 20% 10%;
+  /* Dark blue-black */
+  --foreground: 210 40% 98%;
 
-  --card: 230 15% 5%;
-  /* Very dark blue-black for cards */
-  --card-foreground: 220 10% 98%;
+  --card: 230 15% 15%;
+  --card-foreground: 210 40% 98%;
 
-  --popover: 230 15% 5%;
-  --popover-foreground: 220 10% 98%;
+  --popover: 230 15% 15%;
+  --popover-foreground: 210 40% 98%;
 
   /* Electric blue primary */
-  --primary: 230 100% 60%;
-  --primary-foreground: 220 10% 98%;
+  --primary: 230 100% 55%;
+  --primary-foreground: 0 0% 100%;
 
   /* Vibrant purple secondary */
-  --secondary: 280 100% 60%;
-  --secondary-foreground: 220 10% 98%;
+  --secondary: 280 95% 60%;
+  --secondary-foreground: 0 0% 100%;
 
   /* Muted elements */
-  --muted: 230 20% 15%;
-  --muted-foreground: 220 10% 70%;
+  --muted: 230 20% 20%;
+  --muted-foreground: 210 20% 80%;
 
   /* Subtle accents */
-  --accent: 280 20% 15%;
-  --accent-foreground: 220 10% 98%;
+  --accent: 280 20% 20%;
+  --accent-foreground: 210 40% 98%;
 
   /* Destructive/error elements */
   --destructive: 0 100% 65%;
-  /* Bright red */
-  --destructive-foreground: 220 10% 98%;
+  --destructive-foreground: 0 0% 100%;
 
   /* Success elements */
-  --success: 160 100% 40%;
-  /* Green */
-  --success-foreground: 220 10% 98%;
+  --success: 160 80% 40%;
+  --success-foreground: 0 0% 100%;
 
   /* Warning elements */
-  --warning: 40 100% 60%;
-  /* Amber/yellow */
-  --warning-foreground: 220 10% 10%;
+  --warning: 38 95% 60%;
+  --warning-foreground: 0 0% 10%;
 
   /* Borders and inputs */
-  --border: 230 25% 15%;
-  --input: 230 25% 15%;
+  --border: 230 15% 25%;
+  --input: 230 15% 25%;
   --ring: 230 70% 50%;
 
-  /* Charts - blue to purple gradient palette */
-  --chart-1: 230 100% 60%;
-  /* Electric blue */
-  --chart-2: 250 100% 60%;
-  /* Blue-purple */
-  --chart-3: 270 100% 60%;
-  /* Purple */
-  --chart-4: 290 100% 60%;
-  /* Purple-pink */
-  --chart-5: 310 100% 60%;
-  /* Pink-purple */
-
   /* Sidebar specific vars */
-  --sidebar: 230 15% 5%;
-  --sidebar-foreground: 220 10% 98%;
-  --sidebar-muted: 230 20% 15%;
-  --sidebar-muted-foreground: 220 10% 70%;
-  --sidebar-accent: 280 20% 15%;
-  --sidebar-accent-foreground: 220 10% 98%;
-  --sidebar-border: 230 25% 15%;
+  --sidebar: 230 15% 15%;
+  --sidebar-foreground: 210 40% 98%;
+  --sidebar-muted: 230 20% 20%;
+  --sidebar-muted-foreground: 210 20% 80%;
+  --sidebar-accent: 280 20% 20%;
+  --sidebar-accent-foreground: 210 40% 98%;
+  --sidebar-border: 230 15% 25%;
   --sidebar-ring: 230 70% 50%;
 }
 
@@ -290,11 +272,11 @@
     animation: var(--animate-pulse);
   }
 
-  /* Glass effect for cards and containers */
+  /* Glass effect for cards and containers - updated for light theme */
   .bg-glass {
-    background: hsl(var(--card) / 0.7);
+    background: hsl(var(--card) / 0.85);
     backdrop-filter: blur(8px);
-    border: 1px solid hsl(var(--border) / 0.2);
+    border: 1px solid hsl(var(--border) / 0.5);
   }
 
   /* Enhanced hover effects */
@@ -313,5 +295,49 @@
     -webkit-background-clip: text;
     color: transparent;
     background-image: var(--gradient-blue-purple);
+  }
+}
+
+/* Custom Section Styling for Public Site - Light Theme */
+@layer components {
+
+  /* Section that was previously black background */
+  .section-primary {
+    @apply bg-white border-t border-b border-gray-100;
+  }
+
+  /* Section that was previously dark gray (gray-950) background */
+  .section-secondary {
+    @apply bg-gray-50 border-t border-b border-gray-100;
+  }
+
+  /* Dark overlays for image backgrounds - more subtle in light theme */
+  .overlay-gradient-light {
+    @apply bg-gradient-to-b from-white/80 via-white/50 to-white/80;
+  }
+
+  /* Card styling for content boxes in light theme */
+  .card-light {
+    @apply bg-white border border-gray-100 shadow-sm rounded-xl;
+  }
+
+  /* Feature box styling for light theme */
+  .feature-box {
+    @apply bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200;
+  }
+
+  /* Color text in light theme */
+  .text-subtle {
+    @apply text-gray-600;
+  }
+
+  /* Section heading in light theme */
+  .section-heading {
+    @apply text-gray-900 font-bold;
+  }
+
+  /* Section description in light theme */
+  .section-description {
+    @apply text-gray-600;
   }
 }

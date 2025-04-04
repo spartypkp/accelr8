@@ -1,66 +1,6 @@
-import { SanityImageSource } from '@sanity/image-url/lib/types/types';
 import { sanityClient } from './sanity';
+import { House, Person, Resource } from './sanity.types';
 import { createClient } from './supabase/server';
-
-// Sanity Content Types
-export interface SanityHouse {
-	_id: string;
-	name: string;
-	description?: string;
-	location?: {
-		address?: string;
-		city?: string;
-		state?: string;
-		zip?: string;
-		country?: string;
-		neighborhood?: string;
-		coordinates?: {
-			lat: number;
-			lng: number;
-		};
-	};
-	amenities?: SanityAmenity[];
-	mainImage?: SanityImageSource;
-	gallery?: SanityImageSource[];
-	slug?: { current: string; };
-	featured?: boolean;
-}
-
-export interface SanityAmenity {
-	_id: string;
-	name: string;
-	description?: string;
-	icon?: string;
-	category?: string;
-}
-
-export interface SanityPerson {
-	_id: string;
-	name: string;
-	bio?: string;
-	skills?: string[];
-	profileImage?: SanityImageSource;
-	socialLinks?: {
-		twitter?: string;
-		linkedin?: string;
-		github?: string;
-		website?: string;
-	};
-	role?: string;
-}
-
-export interface SanityResource {
-	_id: string;
-	name: string;
-	description?: string;
-	type?: string;
-	location?: string;
-	capacity?: number;
-	bookingCost?: number;
-	amenities?: string[];
-	image?: SanityImageSource;
-	availableNow?: boolean;
-}
 
 // Supabase Data Types
 export interface SupabaseUser {
@@ -145,16 +85,16 @@ export interface MaintenanceComment {
 }
 
 // Combined Types
-export interface HouseWithRooms extends SanityHouse {
+export interface HouseWithRooms extends House {
 	rooms: SupabaseRoom[];
 }
 
 export interface UserProfile extends SupabaseUser {
-	profile?: SanityPerson;
+	profile?: Person;
 }
 
 export interface ResourceWithBookings {
-	resources: (SanityResource & { availableNow: boolean; })[];
+	resources: (Resource & { availableNow: boolean; })[];
 	bookings: ResourceBooking[];
 }
 
@@ -167,55 +107,91 @@ export interface ResourceAvailability {
  * Fetch house data from both Sanity CMS and Supabase
  */
 export async function getHouse(houseId: string): Promise<HouseWithRooms | null> {
-	// Get content data from Sanity
-	const houseContent = await sanityClient.fetch<SanityHouse>(
-		`*[_type == "house" && slug.current == $slug][0]{
-      _id,
-      name,
-      slug,
-      description,
-      location,
-      amenities[]->,
-      mainImage,
-      gallery
-    }`,
-		{ slug: houseId }
-	);
+	try {
+		// Fetch house data from our API route
+		const houseResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/houses/${houseId}`, {
+			cache: 'no-store',
+			next: { revalidate: 60 } // Revalidate every minute
+		});
 
-	if (!houseContent) {
+		if (!houseResponse.ok) {
+			if (houseResponse.status === 404) {
+				return null;
+			}
+			throw new Error(`Failed to fetch house: ${houseResponse.status}`);
+		}
+
+		const house = await houseResponse.json();
+
+		// For now, let's mock the rooms data since we don't have a database for it yet
+		// In a real application, you would fetch this from your database
+		const mockRooms: SupabaseRoom[] = [
+			{
+				id: '1',
+				sanity_house_id: house._id,
+				room_number: '101',
+				room_type: 'single',
+				capacity: 1,
+				price_monthly: 1900,
+				is_available: true,
+				status: 'available',
+				monthly_rate: 1900
+			},
+			{
+				id: '2',
+				sanity_house_id: house._id,
+				room_number: '102',
+				room_type: 'double',
+				capacity: 2,
+				price_monthly: 1500,
+				is_available: false,
+				status: 'occupied',
+				monthly_rate: 1500
+			},
+			{
+				id: '3',
+				sanity_house_id: house._id,
+				room_number: '103',
+				room_type: 'single',
+				capacity: 1,
+				price_monthly: 2000,
+				is_available: true,
+				status: 'available',
+				monthly_rate: 2000
+			}
+		];
+
+		return {
+			...house,
+			rooms: mockRooms
+		};
+	} catch (error) {
+		console.error('Error fetching house details:', error);
 		return null;
 	}
-
-	// Get operational data from Supabase
-	const supabase = await createClient();
-
-	const { data: roomsData } = await supabase
-		.from('rooms')
-		.select('*')
-		.eq('sanity_house_id', houseContent._id);
-
-	// Combine the data
-	return {
-		...houseContent,
-		rooms: roomsData || []
-	};
 }
 
 /**
  * Fetch houses overview
  */
-export async function getHouses(): Promise<SanityHouse[]> {
-	return sanityClient.fetch<SanityHouse[]>(
-		`*[_type == "house" && defined(slug.current)]{
-      _id,
-      name,
-      slug,
-      description,
-      location,
-      mainImage,
-      featured
-    }`
-	);
+export async function getHouses(): Promise<House[]> {
+	try {
+		// Fetch houses data from our API route
+		const housesResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/houses`, {
+			cache: 'no-store',
+			next: { revalidate: 60 } // Revalidate every minute
+		});
+
+		if (!housesResponse.ok) {
+			throw new Error(`Failed to fetch houses: ${housesResponse.status}`);
+		}
+
+		const houses = await housesResponse.json();
+		return houses;
+	} catch (error) {
+		console.error('Error fetching houses:', error);
+		return [];
+	}
 }
 
 /**
@@ -238,7 +214,7 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 	}
 
 	// Get public profile from Sanity
-	const sanityProfile = await sanityClient.fetch<SanityPerson>(
+	const sanityProfile = await sanityClient.fetch<Person>(
 		`*[_type == "person" && _id == $personId][0]{
       _id,
       name,
@@ -279,17 +255,16 @@ export async function getHomepage(): Promise<{
  * Get resource bookings for a house
  */
 export async function getResourceBookings(houseId: string, userId?: string): Promise<ResourceWithBookings> {
-	// Get resources from Sanity
-	const resources = await sanityClient.fetch<SanityResource[]>(`
+	// Get resources from Sanity using the generated Resource type
+	const resources = await sanityClient.fetch<Resource[]>(`
     *[_type == "resource" && references($houseId)]{
       _id,
       name,
       description,
-      type,
+      resourceType,
       location,
       capacity,
-      bookingCost,
-      amenities,
+      tags,
       image
     }
   `, { houseId });

@@ -1,51 +1,37 @@
 /**
- * Consolidated authentication utilities
- * This file provides server-side auth functionality
+ * Simplified authentication utilities for server-side auth functionality
  */
 
 import { redirect } from 'next/navigation';
-import { Permission, Resource, UserProfile, can } from './auth';
+import { UserProfile, UserRole } from './auth/types';
 import { createClient } from './supabase/server';
 
 /**
- * Get the current session
- */
-export async function getSession() {
-	const supabase = await createClient();
-	return supabase.auth.getSession();
-}
-
-/**
- * Get the current user with profile data
+ * Get the current user with basic profile data
  */
 export async function getCurrentUser(): Promise<UserProfile | null> {
 	const supabase = await createClient();
 
 	try {
-		const { data: { session }, error } = await supabase.auth.getSession();
+		// Get authenticated user
+		const { data: { user }, error } = await supabase.auth.getUser();
 
-		if (error || !session?.user) {
+		if (error || !user) {
 			return null;
 		}
 
-		const user = session.user;
-
-		// Get user profile data including role
-		const { data: userProfile } = await supabase
-			.from('accelr8_users')
-			.select('name, role, avatar_url')
-			.eq('id', user.id)
-			.single();
+		// Get user role from metadata or use default
+		const role = (user.user_metadata?.role || 'resident') as UserRole;
 
 		// Construct a standardized user object
 		return {
 			id: user.id,
 			email: user.email || '',
-			name: userProfile?.name || user.user_metadata?.name || 'Unknown User',
-			role: userProfile?.role || 'resident',
+			name: user.user_metadata?.name || 'Unknown User',
+			role: role,
 			profile: {
 				image: {
-					url: userProfile?.avatar_url || user.user_metadata?.avatar_url || '',
+					url: user.user_metadata?.avatar_url || '',
 				},
 			},
 		};
@@ -70,27 +56,44 @@ export async function requireAuth(redirectTo = '/login') {
 }
 
 /**
- * Check if the current user has a specific permission
+ * Check if the current user has admin role
  * Redirects to fallback URL if not authorized
  */
-export async function requirePermission(
-	permission: Permission,
-	resource?: Resource,
-	fallbackUrl = '/dashboard'
-) {
-	const user = await getCurrentUser();
+export async function requireAdmin(fallbackUrl = '/dashboard') {
+	const user = await requireAuth('/login');
 
-	if (!user) {
-		redirect('/login');
-	}
-
-	const hasPermission = can(user, permission, resource);
-
-	if (!hasPermission) {
+	if (user.role !== 'admin' && user.role !== 'super_admin') {
 		redirect(fallbackUrl);
 	}
 
 	return user;
+}
+
+/**
+ * Check if a user has access to a specific house
+ */
+export async function checkHouseAccess(userId: string, houseId: string): Promise<boolean> {
+	if (!userId || !houseId) return false;
+
+	const supabase = await createClient();
+	const user = await getCurrentUser();
+
+	// Super admins have access to all houses
+	if (user?.role === 'super_admin') return true;
+
+	// Determine the correct table based on user role
+	const table = user?.role === 'admin' ? 'house_admins' : 'residencies';
+
+	const { data, error } = await supabase
+		.from(table)
+		.select('id')
+		.eq('user_id', userId)
+		.eq('sanity_house_id', houseId)
+		.maybeSingle();
+
+	if (error || !data) return false;
+
+	return true;
 }
 
 /**
@@ -102,36 +105,9 @@ export async function signIn(email: string, password: string) {
 }
 
 /**
- * Sign up with Supabase
- */
-export async function signUp(email: string, password: string) {
-	const supabase = await createClient();
-	return supabase.auth.signUp({ email, password });
-}
-
-/**
  * Sign out
  */
 export async function signOut() {
 	const supabase = await createClient();
 	return supabase.auth.signOut();
-}
-
-/**
- * Check if a user has admin privileges
- */
-export function isAdminUser(user: any): boolean {
-	if (!user) return false;
-
-	// Check role directly
-	if (user.role === 'admin' || user.role === 'super_admin') {
-		return true;
-	}
-
-	// Check role in user_metadata
-	if (user.user_metadata?.role === 'admin' || user.user_metadata?.role === 'super_admin') {
-		return true;
-	}
-
-	return false;
 } 
