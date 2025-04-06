@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/lib/auth';
+import { useUser } from '@/hooks/UserContext';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -49,7 +49,7 @@ export function SignUpForm() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
 
-	const { signUp } = useAuth();
+	const { signUp } = useUser();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

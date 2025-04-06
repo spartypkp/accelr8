@@ -1,117 +1,56 @@
+'use client';
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { createClient } from "@/lib/supabase/server";
+import { useUser } from "@/hooks/UserContext";
 import { Building, HomeIcon } from "lucide-react";
-import { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export const metadata: Metadata = {
-	title: "House Selection | Accelr8",
-	description: "Select a house to view",
-};
+export default function DashboardPage() {
+	const { user, extendedUser, houses, loadingHouses, fetchUserHouses, isAdmin, isSuperAdmin } = useUser();
+	const router = useRouter();
 
-// Define house type
-type House = {
-	id: string;
-	name: string;
-	address: string;
-	image_url?: string;
-};
+	useEffect(() => {
+		// Redirect to login if no user
+		if (!user && !extendedUser) {
+			router.push('/login');
+			return;
+		}
 
-export default async function DashboardPage() {
-	const supabase = await createClient();
+		// Fetch houses if needed
+		if (houses.length === 0 && !loadingHouses) {
+			fetchUserHouses();
+		}
 
-	// Get current user
-	const { data: { user } } = await supabase.auth.getUser();
-	if (!user) {
-		redirect("/login");
+		// Auto-redirect if user has access to exactly one house
+		if (houses.length === 1) {
+			const houseId = houses[0].id;
+			const redirectPath = houses[0].accessType === 'resident' || (!isAdmin && !isSuperAdmin)
+				? `/dashboard/${houseId}/resident`
+				: `/dashboard/${houseId}/admin`;
+			router.push(redirectPath);
+		}
+	}, [user, extendedUser, houses, loadingHouses, fetchUserHouses, router, isAdmin, isSuperAdmin]);
+
+	// Show loading state while fetching houses
+	if (loadingHouses) {
+		return (
+			<div className="container max-w-6xl mx-auto py-8">
+				<div className="mb-8 flex items-center gap-2">
+					<HomeIcon className="h-6 w-6" />
+					<h1 className="text-3xl font-bold">Your Houses</h1>
+				</div>
+				<div className="text-center p-8">
+					<p>Loading your houses...</p>
+				</div>
+			</div>
+		);
 	}
 
-	// Get user role
-	const { data: userData } = await supabase
-		.from('accelr8_users')
-		.select('role')
-		.eq('id', user.id)
-		.single();
-
-	const userRole = userData?.role || 'resident';
-
-	// Get houses based on user role
-	const houses: House[] = [];
-
-	if (userRole === 'super_admin') {
-		// Super admins can see all houses
-		const { data: allHouses } = await supabase
-			.from('houses')
-			.select('id, name, address, image_url');
-
-		if (allHouses) {
-			allHouses.forEach((house: any) => {
-				houses.push({
-					id: house.id,
-					name: house.name,
-					address: house.address,
-					image_url: house.image_url
-				});
-			});
-		}
-	} else if (userRole === 'admin') {
-		// Admins see houses they manage
-		const { data: adminHouses } = await supabase
-			.from('house_admins')
-			.select(`
-				id,
-				houses:sanity_house_id (
-					id, 
-					name,
-					address,
-					image_url
-				)
-			`)
-			.eq('user_id', user.id);
-
-		if (adminHouses) {
-			adminHouses.forEach((item: any) => {
-				if (item.houses) {
-					houses.push({
-						id: item.houses.id,
-						name: item.houses.name,
-						address: item.houses.address,
-						image_url: item.houses.image_url
-					});
-				}
-			});
-		}
-	} else {
-		// Residents see houses they live in
-		const { data: residentHouses } = await supabase
-			.from('residencies')
-			.select(`
-				id,
-				houses:sanity_house_id (
-					id, 
-					name,
-					address,
-					image_url
-				)
-			`)
-			.eq('user_id', user.id)
-			.eq('status', 'active');
-
-		if (residentHouses) {
-			residentHouses.forEach((item: any) => {
-				if (item.houses) {
-					houses.push({
-						id: item.houses.id,
-						name: item.houses.name,
-						address: item.houses.address,
-						image_url: item.houses.image_url
-					});
-				}
-			});
-		}
-	}
+	// Determine preferred access type based on user role
+	const preferredAccessType = isAdmin || isSuperAdmin ? 'admin' : 'resident';
 
 	return (
 		<div className="container max-w-6xl mx-auto py-8">
@@ -154,17 +93,34 @@ export default async function DashboardPage() {
 							</CardHeader>
 							<CardContent>
 								<p className="text-sm">
-									{userRole === 'admin' || userRole === 'super_admin'
+									{house.accessType === 'admin'
 										? 'You have management access to this house'
 										: 'You are a resident of this house'}
 								</p>
 							</CardContent>
-							<CardFooter>
+							<CardFooter className="flex flex-col space-y-2">
+								{/* Primary access button based on role */}
 								<Button asChild className="w-full">
-									<Link href={`/dashboard/${house.id}/${userRole === 'resident' ? 'resident' : 'admin'}`}>
-										{userRole === 'resident' ? 'Go to Resident Dashboard' : 'Manage House'}
+									<Link href={`/dashboard/${house.id}/${preferredAccessType}`}>
+										{preferredAccessType === 'resident' ? 'Go to Resident Dashboard' : 'Manage House'}
 									</Link>
 								</Button>
+
+								{/* Secondary access button if user has dual access */}
+								{isAdmin && house.accessType === 'resident' && (
+									<Button asChild variant="outline" className="w-full">
+										<Link href={`/dashboard/${house.id}/admin`}>
+											Manage as Admin
+										</Link>
+									</Button>
+								)}
+								{house.accessType === 'admin' && (
+									<Button asChild variant="outline" className="w-full">
+										<Link href={`/dashboard/${house.id}/resident`}>
+											View as Resident
+										</Link>
+									</Button>
+								)}
 							</CardFooter>
 						</Card>
 					))}
@@ -172,4 +128,4 @@ export default async function DashboardPage() {
 			)}
 		</div>
 	);
-} 
+}

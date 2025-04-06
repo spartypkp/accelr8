@@ -1,15 +1,14 @@
 'use client';
 
-import { useAuth } from '@/lib/auth';
-import Link from 'next/link';
-import { useState } from 'react';
-
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useUser } from '@/hooks/UserContext';
 import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export function ForgotPasswordForm() {
 	const [email, setEmail] = useState('');
@@ -17,7 +16,7 @@ export function ForgotPasswordForm() {
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
 
-	const { resetPassword } = useAuth();
+	const { resetPassword } = useUser();
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();

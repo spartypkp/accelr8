@@ -8,6 +8,3 @@ export * from './hooks';
 
 // Server-side utilities
 export * from './auth-utils';
-
-// Route configuration
-export * from './routes-config';

@@ -442,6 +442,80 @@ async function getHouseWithResidents(houseId: string) {
 - Password recovery
 - Role-based access (resident, admin, super-admin)
 
+## Authentication & Authorization Architecture
+
+The Accelr8 platform implements a comprehensive authentication and authorization system using Next.js middleware and Supabase authentication. This system enforces robust access controls while maintaining a clean user experience.
+
+### Authentication Flow
+
+1. **User Authentication**
+   - Authentication is handled by Supabase Auth
+   - Login, registration, and password recovery flows are provided
+   - Sessions are managed via cookies with proper security measures
+
+2. **Route Protection**
+   - All routes under `/dashboard/*` are protected and require authentication
+   - Middleware intercepts requests to check for valid sessions
+   - Unauthenticated users are redirected to the login page with return URL
+
+3. **Role-Based Access Control**
+   - Three user roles with increasing permissions:
+     - `resident`: Basic access to resident features for assigned houses
+     - `admin`: House management capabilities plus resident features
+     - `super_admin`: Full access to all houses and features
+
+4. **House-Specific Permissions**
+   - Users only have access to houses they're associated with
+   - Residents can only access their assigned houses (via `residencies` table)
+   - Admins can only manage houses they're assigned to (via `house_admins` table)
+   - Super admins have access to all houses
+
+### Implementation Details
+
+1. **Middleware Architecture**
+   - Root middleware (`src/middleware.ts`) intercepts all requests
+   - Auth-specific middleware (`src/lib/supabase/middleware.ts`) handles authentication logic
+   - Clean fallbacks for authentication failures
+
+2. **Dashboard Entry Point**
+   - `/dashboard` serves as entry to house selection
+   - Displays houses the user has access to based on their role
+   - Admins see houses they manage, residents see houses they live in
+
+3. **House Access Verification**
+   - When accessing a specific house (`/dashboard/[houseId]/*`):
+     - Middleware verifies the user has access to that house
+     - Checks appropriate table based on user role (`residencies` or `house_admins`)
+     - Redirects to house selection if access check fails
+
+4. **Section-Based Permissions**
+   - `/dashboard/[houseId]/resident/*` - Resident functionality (accessible to all users with house access)
+   - `/dashboard/[houseId]/admin/*` - Admin functionality (only for admins and super admins)
+   - Routing structure enforces clear separation of concerns
+
+5. **UI Components & Navigation**
+   - Navigation adapts based on user role and current section
+   - Admins can switch between resident and admin views
+   - Layout components handle conditional rendering based on permissions
+
+### Security Considerations
+
+1. **Multiple Verification Layers**
+   - Client-side navigation restrictions
+   - Server middleware protection
+   - Database-level access controls
+   - UI conditional rendering
+
+2. **Principle of Least Privilege**
+   - Users only see navigation options they have permission to access
+   - Database queries are scoped to the user's role and assigned houses
+   - Super admin privileges are strictly controlled
+
+3. **Session Management**
+   - Secure cookie handling
+   - Proper token refresh
+   - Session timeout management
+
 ## House Dashboard (Resident Portal)
 
 When a resident logs in, they should be directed to their house dashboard with:
@@ -561,7 +635,7 @@ For managing the entire Accelr8 operation across all houses:
 
 ```
 /                                  # Main homepage
-/story                            # About Accelr8 Our story
+/story                             # About Accelr8 Our story
 /houses                            # All houses overview
 /houses/[houseId]                  # Public house page
 /events                            # Organization events
@@ -574,25 +648,25 @@ For managing the entire Accelr8 operation across all houses:
 /forgot-password                   # Password recovery
 
 # Authenticated routes
-/dashboard                         # User's main dashboard (redirects to house)
+/dashboard                         # House selection dashboard
 
 # House-specific resident dashboard
-/dashboard/[houseId]               # House dashboard home
-/dashboard/[houseId]/community     # Community features
-/dashboard/[houseId]/events        # Events calendar
-/dashboard/[houseId]/resources     # Resource booking
-/dashboard/[houseId]/maintenance   # Maintenance requests
-/dashboard/[houseId]/info          # House information
-/dashboard/[houseId]/billing       # Payment information
+/dashboard/[houseId]/resident             # Resident dashboard home
+/dashboard/[houseId]/resident/community   # Community features
+/dashboard/[houseId]/resident/events      # Events calendar
+/dashboard/[houseId]/resident/resources   # Resource booking
+/dashboard/[houseId]/resident/maintenance # Maintenance requests
+/dashboard/[houseId]/resident/billing     # Payment information
+/dashboard/[houseId]/resident/profile     # User profile
 
 # House admin routes (house manager)
-/dashboard/[houseId]/admin         # House admin dashboard
-/dashboard/[houseId]/admin/residents     # Resident management
-/dashboard/[houseId]/admin/operations    # Operations management
-/dashboard/[houseId]/admin/events        # Events management
-/dashboard/[houseId]/admin/analytics     # House analytics
-/dashboard/[houseId]/admin/finances      # Financial management
-/dashboard/[houseId]/admin/applications  # Application management
+/dashboard/[houseId]/admin                # House admin dashboard
+/dashboard/[houseId]/admin/residents      # Resident management
+/dashboard/[houseId]/admin/operations     # Operations management
+/dashboard/[houseId]/admin/events         # Events management
+/dashboard/[houseId]/admin/analytics      # House analytics
+/dashboard/[houseId]/admin/finances       # Financial management
+/dashboard/[houseId]/admin/applications   # Application management
 
 # Super-admin routes (organization level)
 /admin                             # Super-admin overview of all houses

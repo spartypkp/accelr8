@@ -1,26 +1,29 @@
-import { AuthProvider } from "@/lib/auth/context";
-import type { Metadata } from "next";
 
-import "./globals.css";
+import { UserProvider } from '@/hooks/UserContext';
+import type { Metadata } from 'next';
+import { Inter } from 'next/font/google';
+import './globals.css';
 
-
+const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-	title: "Accelr8 Dashboard",
-	description: "Information hub for the Accelr8 hacker house",
+	title: 'Accelr8 - Coliving for Founders',
+	description: 'Platform for managing Accelr8 hacker houses',
 };
 
 export default function RootLayout({
 	children,
-}: Readonly<{
+}: {
 	children: React.ReactNode;
-}>) {
+}) {
 	return (
-		<html lang="en">
-			<body
-				className="antialiased bg-background text-foreground"
-			>
-				<AuthProvider>{children}</AuthProvider>
+		<html lang="en" suppressHydrationWarning>
+			<body className={inter.className}>
+
+				<UserProvider>
+					{children}
+				</UserProvider>
+
 			</body>
 		</html>
 	);

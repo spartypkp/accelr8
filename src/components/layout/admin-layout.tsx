@@ -15,7 +15,7 @@ import {
 	Sheet,
 	SheetContent
 } from '@/components/ui/sheet';
-import { useAuth } from '@/lib/auth/context';
+import { useUser } from '@/hooks/UserContext';
 import { cn } from '@/lib/utils';
 import {
 	BarChart3,
@@ -39,7 +39,7 @@ interface AdminLayoutProps {
 
 export function AdminLayout({ children }: AdminLayoutProps) {
 	const pathname = usePathname();
-	const { user, signOut } = useAuth();
+	const { user, signOut } = useUser();
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 
 	const navItems = [

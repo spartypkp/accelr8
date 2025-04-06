@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '@/lib/auth';
+import { useUser } from '@/hooks/UserContext';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -18,7 +18,7 @@ export function SignInForm() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	const { signIn } = useAuth();
+	const { signIn } = useUser();
 	const router = useRouter();
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -34,7 +34,7 @@ export function SignInForm() {
 				return;
 			}
 
-			// Successful login
+			// Successful login - just go to dashboard which will handle redirection
 			router.push('/dashboard');
 			router.refresh();
 		} catch (err) {

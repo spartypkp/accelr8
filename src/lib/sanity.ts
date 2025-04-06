@@ -1,5 +1,4 @@
-import imageUrlBuilder from '@sanity/image-url';
-import { createClient } from 'next-sanity';
+import { createClient, SanityClient } from 'next-sanity';
 import { SanityImageAsset, SanityImageCrop, SanityImageHotspot } from './sanity.types';
 
 // Defining a union type for all possible Sanity image sources based on the generated types
@@ -34,16 +33,13 @@ const projectId = process.env.NEXT_PUBLIC_SANITY_PROJECT_ID;
 const dataset = process.env.NEXT_PUBLIC_SANITY_DATASET || 'production';
 const apiVersion = process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2023-03-25';
 
-export const sanityClient = createClient({
-	projectId,
-	dataset,
-	apiVersion,
-	useCdn: process.env.NODE_ENV === 'production' // Use CDN in production, live API in development
-});
+export const createSanityClient = (): SanityClient => {
+	const client = createClient({
+		projectId,
+		dataset,
+		apiVersion,
+		useCdn: process.env.NODE_ENV === 'production' // Use CDN in production, live API in development
+	});
 
-// For image URL generation
-const builder = imageUrlBuilder(sanityClient);
-
-export function urlFor(source: SanityImage) {
-	return builder.image(source);
-} 
+	return client;
+}; 

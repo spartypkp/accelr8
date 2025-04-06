@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
+import { useUser } from "@/hooks/UserContext";
 import { ApplicationData, getHouseIdFromSlug, submitApplication } from "@/lib/applications";
-import { useAuth } from "@/lib/auth";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import {
@@ -100,7 +100,7 @@ function ApplicationPageContent() {
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
 	const router = useRouter();
-	const { user } = useAuth();
+	const { user } = useUser();
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeStep, setActiveStep] = useState("personal");

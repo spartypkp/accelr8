@@ -80,19 +80,8 @@ export async function updateSession(request: NextRequest) {
 		return response;
 	}
 
-	// Get user role
-	const { data: userData, error: userError } = await supabase
-		.from('accelr8_users')
-		.select('role')
-		.eq('id', user.id)
-		.single();
 
-	if (userError) {
-		// In case of error, redirect to a safe page
-		return NextResponse.redirect(new URL('/dashboard', request.url));
-	}
-
-	const userRole = userData?.role || 'resident';
+	const userRole = user.user_metadata.role;
 
 	// Super admins can access everything
 	if (userRole === 'super_admin') {

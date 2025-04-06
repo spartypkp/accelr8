@@ -1,6 +1,9 @@
-import { sanityClient } from './sanity';
+
+import { createSanityClient } from './sanity';
 import { House, Person, Resource } from './sanity.types';
 import { createClient } from './supabase/server';
+
+const sanityClient = createSanityClient();
 
 // Supabase Data Types
 export interface SupabaseUser {

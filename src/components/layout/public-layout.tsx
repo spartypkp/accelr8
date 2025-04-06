@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { useAuth } from '@/lib/auth/context';
+import { useUser } from '@/hooks/UserContext';
 import { cn } from '@/lib/utils';
 import { Menu, X } from 'lucide-react';
 import Image from 'next/image';
@@ -17,7 +17,7 @@ interface PublicLayoutProps {
 export function PublicLayout({ children }: PublicLayoutProps) {
 	const [isScrolled, setIsScrolled] = useState(false);
 	const pathname = usePathname();
-	const { user } = useAuth();
+	const { user } = useUser();
 
 	// Handle scrolling effect for the navigation
 	useEffect(() => {
