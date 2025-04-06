@@ -167,7 +167,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
 									<div className="mt-auto border-t pt-4 flex flex-col space-y-4">
 										{user ? (
 											<Button asChild>
-												<Link href="/dashboard">Dashboard</Link>
+												<Link href="/dashboard/resident">My Dashboard</Link>
 											</Button>
 										) : (
 											<Button asChild className="bg-gradient-primary">

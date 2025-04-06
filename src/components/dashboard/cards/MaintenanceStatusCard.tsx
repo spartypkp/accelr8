@@ -134,7 +134,7 @@ export function MaintenanceStatusCard({ requestId, houseId, onUpdateStatus, onAd
 			case 'cancelled':
 				return "Cancelled";
 			default:
-				return status.replace(/_/g, ' ');
+				return (status as string).replace(/_/g, ' ');
 		}
 	};
 
@@ -329,7 +329,7 @@ export function MaintenanceStatusCard({ requestId, houseId, onUpdateStatus, onAd
 						<div className="pt-2 mt-4 border-t">
 							<h4 className="text-sm font-medium mb-2">Update Status</h4>
 							<div className="flex flex-wrap gap-2">
-								{data.request.status !== "cancelled" && (
+								{(data.request.status as MaintenanceRequest['status']) !== "cancelled" && (
 									<Button
 										variant="outline"
 										size="sm"
@@ -338,7 +338,7 @@ export function MaintenanceStatusCard({ requestId, houseId, onUpdateStatus, onAd
 										Cancel Request
 									</Button>
 								)}
-								{data.request.status !== "completed" && (
+								{(data.request.status as MaintenanceRequest['status']) !== "completed" && (
 									<Button
 										variant="default"
 										size="sm"

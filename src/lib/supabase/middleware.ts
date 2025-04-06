@@ -1,40 +1,49 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
-import { extractParams, getRouteConfig } from '../auth/routes-config';
 
 export async function updateSession(request: NextRequest) {
-	// Create response we'll modify as needed
-	let response = NextResponse.next({
+	// Create a response object that we'll modify
+	const response = NextResponse.next({
 		request,
 	});
 
-	// Create Supabase client with proper cookie handling
+	// Create Supabase client with cookies
 	const supabase = createServerClient(
 		process.env.NEXT_PUBLIC_SUPABASE_URL!,
 		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 		{
 			cookies: {
-				getAll() {
-					return request.cookies.getAll();
+				get(name) {
+					return request.cookies.get(name)?.value;
 				},
-				setAll(cookiesToSet) {
-					cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-					cookiesToSet.forEach(({ name, value, options }) =>
-						response.cookies.set(name, value, options)
-					);
+				set(name, value, options) {
+					// Set cookie for both the request and response
+					response.cookies.set({
+						name,
+						value,
+						...options,
+					});
+				},
+				remove(name, options) {
+					// Remove cookie by setting empty value with expiration
+					response.cookies.set({
+						name,
+						value: '',
+						...options,
+					});
 				},
 			},
 		}
 	);
 
-	// Automatic session handling by Supabase
+	// Get user session data
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
 
 	const pathname = request.nextUrl.pathname;
 
-	// Skip auth for static files and API routes
+	// Skip auth checks for static files and API routes
 	if (
 		pathname.startsWith('/_next') ||
 		pathname.startsWith('/images') ||
@@ -45,140 +54,92 @@ export async function updateSession(request: NextRequest) {
 		return response;
 	}
 
-	// Get route configuration
-	const routeConfig = getRouteConfig(pathname);
-
-	// Allow public routes
-	if (!routeConfig || routeConfig.public) {
+	// Allow public routes (anything not under /dashboard)
+	if (!pathname.startsWith('/dashboard')) {
 		return response;
 	}
 
-	// If no user and route requires auth, redirect to login
+	// If no user and trying to access dashboard, redirect to login
 	if (!user) {
-		const url = new URL('/login', request.url);
-		url.searchParams.set('redirectTo', pathname);
-		return NextResponse.redirect(url);
+		const redirectUrl = new URL('/login', request.url);
+		redirectUrl.searchParams.set('redirectTo', pathname);
+		return NextResponse.redirect(redirectUrl);
 	}
 
-	// Enhanced handling for dashboard entry point
-	if (pathname === '/dashboard') {
-		const url = new URL(request.url);
-		const userRole = user.user_metadata?.role || 'resident';
+	// All authentication checks passed for non-specific routes
+	if (!pathname.match(/\/dashboard\/([^\/]+)(\/.*)?/)) {
+		return response;
+	}
 
-		// For residents, redirect to their house dashboard
+	// Extract houseId from the path
+	const dashboardPathRegex = /\/dashboard\/([^\/]+)(\/.*)?/;
+	const match = pathname.match(dashboardPathRegex);
+	const houseId = match ? match[1] : null;
+
+	if (!houseId) {
+		return response;
+	}
+
+	// Get user role
+	const { data: userData, error: userError } = await supabase
+		.from('accelr8_users')
+		.select('role')
+		.eq('id', user.id)
+		.single();
+
+	if (userError) {
+		// In case of error, redirect to a safe page
+		return NextResponse.redirect(new URL('/dashboard', request.url));
+	}
+
+	const userRole = userData?.role || 'resident';
+
+	// Super admins can access everything
+	if (userRole === 'super_admin') {
+		return response;
+	}
+
+	// Check if this is an admin route
+	const isAdminRoute = pathname.includes(`/dashboard/${houseId}/admin`);
+
+	// Admin routes - only accessible by admins
+	if (isAdminRoute && userRole !== 'admin' && userRole !== 'super_admin') {
+		return NextResponse.redirect(new URL(`/dashboard/${houseId}/resident`, request.url));
+	}
+
+	// Check if user has access to this specific house
+	let userHasAccess = false;
+
+	try {
 		if (userRole === 'resident') {
-			try {
-				// Get user's active residency
-				const { data: residency } = await supabase
-					.from('residencies')
-					.select('sanity_house_id')
-					.eq('user_id', user.id)
-					.eq('status', 'active')
-					.maybeSingle();
+			// Check residency record
+			const { data: residency } = await supabase
+				.from('residencies')
+				.select('id')
+				.eq('user_id', user.id)
+				.eq('sanity_house_id', houseId)
+				.eq('status', 'active')
+				.maybeSingle();
 
-				if (residency?.sanity_house_id) {
-					url.pathname = `/dashboard/${residency.sanity_house_id}`;
-				} else {
-					// Resident without active house - redirect to houses page with message
-					url.pathname = '/houses';
-					url.searchParams.set('status', 'no_active_house');
-				}
-				return NextResponse.redirect(url);
-			} catch (error) {
-				console.error('Error fetching residency:', error);
-			}
+			userHasAccess = !!residency;
+		} else if (userRole === 'admin') {
+			// Check admin access record
+			const { data: adminAccess } = await supabase
+				.from('house_admins')
+				.select('id')
+				.eq('user_id', user.id)
+				.eq('sanity_house_id', houseId)
+				.maybeSingle();
+
+			userHasAccess = !!adminAccess;
 		}
-
-		// For admins, redirect to admin dashboard (either first house or global)
-		else if (userRole === 'admin') {
-			try {
-				// Get houses managed by admin
-				const { data: houses } = await supabase
-					.from('house_admins')
-					.select('sanity_house_id')
-					.eq('user_id', user.id)
-					.limit(1);
-
-				if (houses && houses.length > 0) {
-					url.pathname = `/admin/${houses[0].sanity_house_id}`;
-				} else {
-					url.pathname = '/admin';
-				}
-				return NextResponse.redirect(url);
-			} catch (error) {
-				console.error('Error fetching admin houses:', error);
-			}
-		}
-
-		// For super_admins, redirect to admin overview
-		else if (userRole === 'super_admin') {
-			url.pathname = '/admin';
-			return NextResponse.redirect(url);
-		}
+	} catch (error) {
+		console.error('Error checking house access:', error);
 	}
 
-	// For protected routes, check role permissions
-	if (routeConfig.role) {
-		const userRole = user.user_metadata?.role || 'resident';
-		const roleHierarchy = { resident: 1, admin: 2, super_admin: 3 };
-
-		if (roleHierarchy[userRole] < roleHierarchy[routeConfig.role]) {
-			return NextResponse.redirect(
-				new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
-			);
-		}
-	}
-
-	// Check house access if needed
-	if (routeConfig.checkHouseAccess) {
-		const params = extractParams(routeConfig.path, pathname);
-		const houseId = params.houseId;
-
-		if (houseId) {
-			// Super admins have access to all houses
-			const userRole = user.user_metadata?.role || 'resident';
-			if (userRole === 'super_admin') {
-				return response;
-			}
-
-			// Cache the access check in a cookie for 5 minutes to avoid db queries on every page
-			const cacheKey = `house_access:${user.id}:${houseId}`;
-			const cachedAccess = request.cookies.get(cacheKey)?.value;
-
-			if (cachedAccess === 'true') {
-				return response;
-			}
-
-			try {
-				// Determine the correct table based on user role
-				const table = userRole === 'admin' ? 'house_admins' : 'residencies';
-
-				// Minimal query - just get ID for efficiency
-				const { data, error } = await supabase
-					.from(table)
-					.select('id')
-					.eq('user_id', user.id)
-					.eq('sanity_house_id', houseId)
-					.maybeSingle();
-
-				if (!data) {
-					return NextResponse.redirect(
-						new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
-					);
-				}
-
-				// Cache the positive result
-				response.cookies.set(cacheKey, 'true', {
-					maxAge: 300, // 5 minutes
-					path: '/',
-				});
-			} catch (error) {
-				console.error('Error checking house access:', error);
-				return NextResponse.redirect(
-					new URL(routeConfig.fallbackUrl || '/dashboard', request.url)
-				);
-			}
-		}
+	// If no access, redirect to houses selection page
+	if (!userHasAccess) {
+		return NextResponse.redirect(new URL('/houses', request.url));
 	}
 
 	return response;

@@ -12,10 +12,20 @@ import {
 import { signOut } from "@/lib/auth-utils";
 import { Bell, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { MobileSidebar } from "./mobile-sidebar";
 import { WithUserProps } from "./types";
 
 export default function DashboardNavbar({ user }: WithUserProps) {
+	const pathname = usePathname();
+	const pathParts = pathname.split("/");
+
+	// Extract houseId and section from URL
+	const houseId = pathParts.length > 2 ? pathParts[2] : undefined;
+	const isAdmin = pathname.includes('/admin');
+	const section = isAdmin ? 'admin' : 'resident';
+	const basePath = houseId ? `/dashboard/${houseId}/${section}` : '/dashboard';
+
 	// Create initials from name or email
 	const firstInitial = user.name ? user.name.charAt(0) : user.email.charAt(0).toUpperCase();
 	const lastInitial = user.name ? (user.name.includes(" ") ? user.name.split(" ").pop()?.charAt(0) || "" : "") : "";
@@ -26,43 +36,55 @@ export default function DashboardNavbar({ user }: WithUserProps) {
 		window.location.href = "/login";
 	};
 
+	// Define navbar links based on current section
+	const navLinks = isAdmin
+		? [
+			{ title: "Dashboard", href: `${basePath}` },
+			{ title: "Residents", href: `${basePath}/residents` },
+			{ title: "Operations", href: `${basePath}/operations` },
+			{ title: "Events", href: `${basePath}/events` },
+		]
+		: [
+			{ title: "Dashboard", href: `${basePath}` },
+			{ title: "Community", href: `${basePath}/community` },
+			{ title: "Events", href: `${basePath}/events` },
+			{ title: "Resources", href: `${basePath}/resources` },
+		];
+
 	return (
 		<header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background px-4 md:px-6">
 			<MobileSidebar user={user} />
 
 			<div className="mr-4 hidden md:flex">
-				<Link href="/" className="mr-6 flex items-center gap-2">
+				<Link href="/dashboard" className="mr-6 flex items-center gap-2">
 					<span className="font-bold">Accelr8</span>
 				</Link>
 				<nav className="flex items-center gap-6 text-sm">
-					<Link
-						href="/dashboard"
-						className="transition-colors hover:text-foreground/80 text-foreground/60"
-					>
-						Dashboard
-					</Link>
-					<Link
-						href="/dashboard/community"
-						className="transition-colors hover:text-foreground/80 text-foreground/60"
-					>
-						Community
-					</Link>
-					<Link
-						href="/dashboard/events"
-						className="transition-colors hover:text-foreground/80 text-foreground/60"
-					>
-						Events
-					</Link>
-					<Link
-						href="/dashboard/resources"
-						className="transition-colors hover:text-foreground/80 text-foreground/60"
-					>
-						Resources
-					</Link>
+					{houseId && navLinks.map((link) => (
+						<Link
+							key={link.href}
+							href={link.href}
+							className={`transition-colors hover:text-foreground/80 ${pathname === link.href ? 'text-foreground font-medium' : 'text-foreground/60'
+								}`}
+						>
+							{link.title}
+						</Link>
+					))}
 				</nav>
 			</div>
 
 			<div className="flex-1"></div>
+
+			{/* View toggle button for admins */}
+			{houseId && (user?.role === "admin" || user?.role === "super_admin") && (
+				<Button variant="outline" asChild className="mr-2">
+					<Link
+						href={`/dashboard/${houseId}/${isAdmin ? 'resident' : 'admin'}`}
+					>
+						Switch to {isAdmin ? 'Resident' : 'Admin'} View
+					</Link>
+				</Button>
+			)}
 
 			<Button variant="outline" size="icon" className="relative">
 				<Bell className="h-5 w-5" />
@@ -94,13 +116,13 @@ export default function DashboardNavbar({ user }: WithUserProps) {
 					</div>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/profile">
+						<Link href={houseId ? `${basePath}/profile` : "/dashboard/profile"}>
 							<User className="w-4 h-4 mr-2" />
 							Profile
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link href="/dashboard/settings">
+						<Link href={houseId ? `${basePath}/settings` : "/dashboard/settings"}>
 							<Settings className="w-4 h-4 mr-2" />
 							Settings
 						</Link>

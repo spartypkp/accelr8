@@ -109,7 +109,8 @@ export interface ResourceAvailability {
 export async function getHouse(houseId: string): Promise<HouseWithRooms | null> {
 	try {
 		// Fetch house data from our API route
-		const houseResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/houses/${houseId}`, {
+		const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+		const houseResponse = await fetch(`${baseUrl}/api/houses/${houseId}`, {
 			cache: 'no-store',
 			next: { revalidate: 60 } // Revalidate every minute
 		});
@@ -177,7 +178,8 @@ export async function getHouse(houseId: string): Promise<HouseWithRooms | null> 
 export async function getHouses(): Promise<House[]> {
 	try {
 		// Fetch houses data from our API route
-		const housesResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ''}/api/houses`, {
+		const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+		const housesResponse = await fetch(`${baseUrl}/api/houses`, {
 			cache: 'no-store',
 			next: { revalidate: 60 } // Revalidate every minute
 		});

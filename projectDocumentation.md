@@ -77,14 +77,11 @@ This platform will be critical to maintaining operational efficiency during expa
 - ✅ Global styling with customized dark theme
 
 ### Admin Dashboard (Completed)
-- ✅ Main Admin Dashboard page
-- ✅ House-specific Admin Dashboard
-- ✅ Residents Management interface
-- ✅ Events Management system
-- ✅ Operations Management (maintenance tracking)
-- ✅ Analytics Dashboard with performance metrics
-- ✅ Financial Management tools
-- ✅ Communication tools (announcements and messaging)
+- ✅ House Admin Dashboard at `/dashboard/[houseId]/admin`
+- ✅ House health metrics with KPIs
+- ✅ Recent activity tracking
+- ✅ Quick stat cards for key metrics
+- ✅ Sub-page structure for management functions
 
 ### Public Site (In Progress)
 - ✅ Homepage with hero section and feature overview
@@ -92,20 +89,29 @@ This platform will be critical to maintaining operational efficiency during expa
 - ✅ Blog/resources section structure
 - ✅ Events page framework
 
+### Authentication & Authorization (In Progress)
+- ✅ Route configuration with role-based access
+- ✅ House-specific access controls
+- ✅ Authentication flow with Supabase
+- ✅ Role-based redirection
+
+### Resident Dashboard (In Progress)
+- ✅ Basic dashboard structure
+- 🔄 Community features
+- 🔄 House-specific content
+
 ### Not Started
-- Resident dashboard and features
-- Authentication system implementation
+- Detailed admin management sub-pages (residents, operations, etc.)
 - Super-admin dashboard for company executives
 - Content integration - final content, images, and copy
 
 ### Next Steps
-1. Begin implementing the resident dashboard and features
-2. Develop community and social features
+1. Complete resident dashboard features
+2. Develop detailed house admin sub-pages
 3. Implement the super-admin dashboard
-4. Set up authentication and authorization
-5. Integrate with backend APIs
-6. Testing and QA
-7. Deployment
+4. Integrate with backend APIs for live data
+5. Testing and QA
+6. Deployment
 
 ## Technology Stack
 
@@ -480,38 +486,50 @@ When a resident logs in, they should be directed to their house dashboard with:
 
 ## House Admin Dashboard
 
-For house administrators, additional functionality should include:
+House administrators (house managers) can access an admin section directly within the house dashboard at `/dashboard/[houseId]/admin`. This provides a more integrated management experience tied directly to the specific house context. Key functionality includes:
 
-1. **Resident Management**
+1. **Admin Dashboard Overview**
+   - House health metrics (occupancy, satisfaction, etc.)
+   - Quick stats (pending maintenance, upcoming events)
+   - Recent activity feed
+   - Quick actions for common management tasks
+
+2. **Resident Management**
    - View all current residents
    - Application reviews for prospective residents
    - Check-in/check-out processing
    - Room assignments
 
-2. **Operations Management**
+3. **Operations Management**
    - Maintenance request tracking
    - Inventory management
    - Cleaning schedule
    - Service provider contacts
 
-3. **Events Management**
+4. **Events Management**
    - Create and publish events
    - Track RSVPs and attendance
    - Resource allocation for events
 
-4. **Analytics**
+5. **Analytics**
    - House occupancy rates
    - Event participation metrics
    - Resident satisfaction scores
    - Community engagement metrics
 
-5. **Financial Overview**
+6. **Financial Overview**
    - Rent collection status
    - Outstanding payments
    - Operational expenses
    - Budget tracking
 
-6. **Communication Tools**
+7. **Application Management**
+   - Review new applications
+   - Schedule interviews
+   - Track application status
+   - Send acceptance/rejection notifications
+
+8. **Communication Tools**
    - House-wide announcements
    - Targeted communications
    - Feedback collection
@@ -567,16 +585,16 @@ For managing the entire Accelr8 operation across all houses:
 /dashboard/[houseId]/info          # House information
 /dashboard/[houseId]/billing       # Payment information
 
-# House admin routes
-/admin/[houseId]                   # Admin dashboard for specific house
-/admin/[houseId]/residents         # Resident management
-/admin/[houseId]/operations        # Operations management
-/admin/[houseId]/events            # Events management
-/admin/[houseId]/analytics         # House analytics
-/admin/[houseId]/finances          # Financial management
-/admin/[houseId]/communication     # Communication tools
+# House admin routes (house manager)
+/dashboard/[houseId]/admin         # House admin dashboard
+/dashboard/[houseId]/admin/residents     # Resident management
+/dashboard/[houseId]/admin/operations    # Operations management
+/dashboard/[houseId]/admin/events        # Events management
+/dashboard/[houseId]/admin/analytics     # House analytics
+/dashboard/[houseId]/admin/finances      # Financial management
+/dashboard/[houseId]/admin/applications  # Application management
 
-# Super-admin routes
+# Super-admin routes (organization level)
 /admin                             # Super-admin overview of all houses
 /admin/expansion                   # New house setup
 /admin/analytics                   # Organization-wide analytics

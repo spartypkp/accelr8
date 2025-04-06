@@ -2,7 +2,7 @@
  * Common types for dashboard components
  */
 
-// User type for dashboard components
+// User types for dashboard components
 export interface DashboardUser {
 	id: string;
 	email: string;

@@ -20,13 +20,21 @@ interface Event {
 	start_time: string;
 	end_time: string;
 	location: string;
-	type: string;
-	organizer: string;
-	attendees: Attendee[];
-	capacity: number;
-	tags: string[];
-	required?: boolean;
+	event_type: string;
+	created_by: string;
+	max_participants: number;
+	is_mandatory: boolean;
 	sanity_house_id: string;
+	attendees?: Attendee[];
+}
+
+interface ParticipantWithUser {
+	user_id: string;
+	accelr8_users: {
+		id: string;
+		email?: string;
+		display_name?: string;
+	};
 }
 
 interface EventDetailsCardProps {
@@ -41,33 +49,57 @@ const fetcher = async (url: string) => {
 	const supabase = createClient();
 	const [_, eventId, houseId] = url.split('/').slice(-3);
 
-	// In a real implementation, this would fetch from Supabase
-	// For now, return mock data
-	const mockEvent: Event = {
-		id: eventId,
-		title: "Founder Pitch Practice",
-		description: "Weekly session for founders to practice their pitches and get feedback from peers. Open to all house residents.",
-		start_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days in the future
-		end_time: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000).toISOString(), // 2 hours later
-		location: "Conference Room",
-		type: "Workshop",
-		organizer: "Maya Johnson",
-		attendees: [
-			{ id: "1", name: "Alex Chen", avatar: "/placeholder-user.jpg" },
-			{ id: "2", name: "Jamie Smith", avatar: "/placeholder-user.jpg" },
-			{ id: "3", name: "Taylor Wong", avatar: "/placeholder-user.jpg" },
-			{ id: "4", name: "Jordan Lee", avatar: "/placeholder-user.jpg" },
-			{ id: "5", name: "Sam Rodriguez", avatar: "/placeholder-user.jpg" },
-			{ id: "6", name: "Maya Johnson", avatar: "/placeholder-user.jpg" },
-			{ id: "7", name: "Casey Kim", avatar: "/placeholder-user.jpg" },
-			{ id: "8", name: "Robin Patel", avatar: "/placeholder-user.jpg" },
-		],
-		capacity: 12,
-		tags: ["Pitch Practice", "Feedback", "Networking"],
-		sanity_house_id: houseId
-	};
+	// Fetch the event from Supabase
+	const { data: event, error } = await supabase
+		.from("internal_events")
+		.select("*")
+		.eq("id", eventId)
+		.single();
 
-	return mockEvent;
+	if (error) throw error;
+	if (!event) throw new Error("Event not found");
+
+	// Fetch the attendees for this event
+	const { data } = await supabase
+		.from("event_participants")
+		.select(`
+			user_id,
+			accelr8_users:user_id (
+				id,
+				email,
+				display_name
+			)
+		`)
+		.eq("event_id", eventId)
+		.eq("status", "attending");
+	const participants = (data as unknown as ParticipantWithUser[]) || [];
+
+
+	const attendees: Attendee[] = (participants || []).map(participant => ({
+		id: participant.user_id,
+		name: participant.accelr8_users.display_name || participant.accelr8_users.email || 'Unknown User',
+		avatar: '/placeholder-user.jpg'
+	}));
+
+	// Get organizer information
+	let organizer = "Unknown";
+	if (event.created_by) {
+		const { data: organizerData } = await supabase
+			.from("accelr8_users")
+			.select("display_name, email")
+			.eq("id", event.created_by)
+			.single();
+
+		if (organizerData) {
+			organizer = organizerData.display_name || organizerData.email || "Unknown";
+		}
+	}
+
+	return {
+		...event,
+		attendees,
+		organizer
+	};
 };
 
 export function EventDetailsCard({ eventId, houseId, className, onRSVP }: EventDetailsCardProps) {
@@ -107,6 +139,18 @@ export function EventDetailsCard({ eventId, houseId, className, onRSVP }: EventD
 		}
 	};
 
+	// Map event_type to a display name
+	const getEventTypeDisplay = (type: string) => {
+		const typeMap: Record<string, string> = {
+			"workshop": "Workshop",
+			"house_meeting": "Meeting",
+			"social": "Social",
+			"maintenance": "Maintenance",
+			"other": "Other"
+		};
+		return typeMap[type] || type;
+	};
+
 	return (
 		<DashboardCard
 			title="Event Details"
@@ -120,10 +164,10 @@ export function EventDetailsCard({ eventId, houseId, className, onRSVP }: EventD
 				<div className="space-y-4">
 					{/* Event Header */}
 					<div className={cn("px-4 py-3 -mx-4 -mt-2 bg-muted/50",
-						event.required ? "border-l-4 border-primary" : "")}>
+						event.is_mandatory ? "border-l-4 border-primary" : "")}>
 						<div className="flex justify-between items-start">
 							<h3 className="text-lg font-semibold">{event.title}</h3>
-							<Badge>{event.type}</Badge>
+							<Badge>{getEventTypeDisplay(event.event_type)}</Badge>
 						</div>
 						<div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
 							<div className="flex items-center">
@@ -151,10 +195,10 @@ export function EventDetailsCard({ eventId, houseId, className, onRSVP }: EventD
 						<p className="text-sm text-muted-foreground mb-1">Organized by</p>
 						<div className="flex items-center">
 							<Avatar className="h-8 w-8 mr-2">
-								<AvatarImage src="/placeholder-user.jpg" alt={event.organizer} />
-								<AvatarFallback>{event.organizer[0]}</AvatarFallback>
+								<AvatarImage src="/placeholder-user.jpg" alt={event.created_by} />
+								<AvatarFallback>{(event.created_by || 'U')[0]}</AvatarFallback>
 							</Avatar>
-							<span className="text-sm font-medium">{event.organizer}</span>
+							<span className="text-sm font-medium">{event.created_by || 'Unknown'}</span>
 						</div>
 					</div>
 
@@ -162,34 +206,35 @@ export function EventDetailsCard({ eventId, houseId, className, onRSVP }: EventD
 					<div>
 						<div className="flex items-center justify-between mb-2">
 							<p className="text-sm text-muted-foreground">
-								Attendees ({event.attendees.length}/{event.capacity})
+								Attendees ({event.attendees?.length || 0}/{event.max_participants || 'Unlimited'})
 							</p>
 							<Button variant="ghost" size="sm" className="h-7 text-xs">View All</Button>
 						</div>
 						<div className="flex flex-wrap gap-2">
-							{event.attendees.slice(0, 8).map((attendee) => (
+							{(event.attendees || []).slice(0, 8).map((attendee) => (
 								<Avatar key={attendee.id} className="h-8 w-8 border-2 border-background">
 									<AvatarImage src={attendee.avatar} alt={attendee.name} />
 									<AvatarFallback>{attendee.name[0]}</AvatarFallback>
 								</Avatar>
 							))}
-							{event.attendees.length > 8 && (
+							{(event.attendees?.length || 0) > 8 && (
 								<div className="flex items-center justify-center h-8 w-8 rounded-full bg-muted text-xs border-2 border-background">
-									+{event.attendees.length - 8}
+									+{(event.attendees?.length || 0) - 8}
 								</div>
 							)}
 						</div>
 					</div>
 
-					{/* Tags */}
+					{/* Event Type Info */}
 					<div>
-						<p className="text-sm text-muted-foreground mb-2">Tags</p>
+						<p className="text-sm text-muted-foreground mb-2">Event Type</p>
 						<div className="flex flex-wrap gap-2">
-							{event.tags.map((tag, idx) => (
-								<Badge key={idx} variant="outline">
-									{tag}
-								</Badge>
-							))}
+							<Badge variant="outline">
+								{getEventTypeDisplay(event.event_type)}
+							</Badge>
+							{event.is_mandatory && (
+								<Badge variant="destructive">Required</Badge>
+							)}
 						</div>
 					</div>
 
