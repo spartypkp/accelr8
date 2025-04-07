@@ -15,6 +15,7 @@ export type SanityImage = {
 	_type: 'image';
 } | SanityImageAsset | string;
 
+
 // SANITY CONFIGURATION
 // ===================
 // To allow client-side requests to Sanity:

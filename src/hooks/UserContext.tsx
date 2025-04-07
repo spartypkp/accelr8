@@ -1,38 +1,12 @@
 'use client';
 
-import { createSanityClient } from '@/lib/sanity';
-import type { Person as SanityPerson } from '@/lib/sanity.types';
+import { createSanityClient } from '@/lib/sanity/client';
+import { Person as SanityPerson } from '@/lib/sanity/sanity.types';
 import { createClient } from '@/lib/supabase/client';
+import { UserProfile } from '@/lib/types';
 import { User } from '@supabase/supabase-js';
 import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useState } from 'react';
-
-// Type for extended data from accelr8_users table
-type SupabaseUserData = {
-	emergency_contact_name?: string;
-	emergency_contact_phone?: string;
-	phone_number?: string;
-	last_active?: string;
-	// Other fields that don't need to be in auth metadata
-};
-
-// Complete user profile combining auth, extended data, and Sanity
-type UserProfile = {
-	// Base auth data
-	id: string;
-	email?: string;
-
-	// Auth metadata (fast access)
-	role: 'resident' | 'admin' | 'super_admin';
-	sanity_person_id?: string;
-	onboarding_completed: boolean;
-
-	// Extended data (loaded when needed)
-	extendedData?: ExtendedUserData;
-
-	// Sanity profile (loaded when needed)
-	sanityProfile?: Partial<SanityPerson>;
-};
 
 // Define the context type
 export type UserContextType = {
@@ -41,19 +15,12 @@ export type UserContextType = {
 	isLoading: boolean;
 	error: string | null;
 
-	// Derived profile
+	// User profile
 	userProfile: UserProfile | null;
-	isLoadingExtendedData: boolean;
-	isLoadingSanityProfile: boolean;
-
-	// House access (kept from your original)
-	// houses: HouseAccess[];
-	// loadingHouses: boolean;
+	isLoadingProfile: boolean;
 
 	// Functions
-	// fetchUserHouses: () => Promise<HouseAccess[]>;
-	fetchExtendedData: () => Promise<ExtendedUserData | null>;
-	fetchSanityProfile: () => Promise<Partial<SanityPerson> | null>;
+	fetchUserProfile: () => Promise<UserProfile | null>;
 
 	// Auth operations
 	signIn: (email: string, password: string) => Promise<{ error: Error | null; }>;
@@ -74,12 +41,8 @@ const UserContext = createContext<UserContextType>({
 	isLoading: false,
 	error: null,
 	userProfile: null,
-	isLoadingExtendedData: false,
-	isLoadingSanityProfile: false,
-	// houses: [],
-	// loadingHouses: false,
-	fetchExtendedData: async () => null,
-	fetchSanityProfile: async () => null,
+	isLoadingProfile: false,
+	fetchUserProfile: async () => null,
 	signIn: async () => ({ error: new Error('Not implemented') }),
 	signUp: async () => ({ error: new Error('Not implemented') }),
 	signOut: async () => { },
@@ -95,22 +58,18 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 	const [user, setUser] = useState<User | null>(null);
 	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const [isLoadingExtendedData, setIsLoadingExtendedData] = useState(false);
-	const [isLoadingSanityProfile, setIsLoadingSanityProfile] = useState(false);
+	const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 	const [error, setError] = useState<string | null>(null);
-
-	// House access state (from your original)
-	// const [houses, setHouses] = useState<HouseAccess[]>([]);
-	const [loadingHouses, setLoadingHouses] = useState<boolean>(false);
 
 	const router = useRouter();
 	const pathname = usePathname();
 	const supabase = createClient();
+	const sanityClient = createSanityClient();
 
-	// Computed properties based on user metadata
-	const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'super_admin';
-	const isSuperAdmin = userProfile?.role === 'super_admin';
-	const isResident = userProfile?.role === 'resident';
+	// Computed properties based on user profile
+	const isAdmin = userProfile?.isAdmin || false;
+	const isSuperAdmin = userProfile?.isSuperAdmin || false;
+	const isResident = userProfile?.isResident || false;
 
 	// Function to update last_active timestamp
 	const updateLastActive = async (userId: string) => {
@@ -124,64 +83,103 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		}
 	};
 
-	// Function to fetch extended user data
-	const fetchExtendedData = async (): Promise<ExtendedUserData | null> => {
+	// Helper to convert portable text to plain text for bio
+	const portableTextToString = (blocks: any[]): string => {
+		if (!blocks || !Array.isArray(blocks)) return '';
+		return blocks
+			.map(block => {
+				if (!block.children) return '';
+				return block.children.map((child: any) => child.text || '').join('');
+			})
+			.join('\n\n');
+	};
+
+	// Unified function to fetch the complete user profile
+	const fetchUserProfile = async (): Promise<UserProfile | null> => {
 		if (!user) return null;
 
-		setIsLoadingExtendedData(true);
+		setIsLoadingProfile(true);
 		try {
-			const { data, error } = await supabase
-				.from('accelr8_users')
-				.select('emergency_contact_name, emergency_contact_phone, phone_number, last_active')
-				.eq('id', user.id)
-				.single();
+			// 1. Get the basic auth user and metadata
+			const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
 
-			if (error) {
-				console.error('Error fetching extended data:', error.message);
+			if (authError || !authUser) {
+				console.error('Error fetching auth user:', authError?.message);
 				return null;
 			}
 
-			if (data) {
-				// Update the profile with extended data
-				setUserProfile(prev => prev ? { ...prev, extendedData: data } : null);
-				return data;
+			// 2. Get extended data from accelr8_users table
+			const { data: extendedData, error: extendedError } = await supabase
+				.from('accelr8_users')
+				.select('*')
+				.eq('id', authUser.id)
+				.single();
+
+			if (extendedError) {
+				console.error('Error fetching extended data:', extendedError.message);
 			}
 
-			return null;
-		} catch (err) {
-			console.error('Unexpected error:', err);
-			return null;
-		} finally {
-			setIsLoadingExtendedData(false);
-		}
-	};
+			// 3. Get Sanity profile if there's a sanity_person_id
+			let sanityProfile: SanityPerson | null = null;
+			const sanityPersonId = authUser.user_metadata?.sanity_person_id;
 
-	// Function to fetch Sanity profile
-	const fetchSanityProfile = async (): Promise<Partial<SanityPerson> | null> => {
-		if (!userProfile?.sanity_person_id) return null;
-
-		setIsLoadingSanityProfile(true);
-		try {
-			// Use your Sanity client to fetch the person
-
-			const sanityClient = createSanityClient(); // You'll need to implement this
-			const profile = await sanityClient.fetch(
-				`*[_type == "person" && _id == $id][0]`,
-				{ id: userProfile.sanity_person_id }
-			);
-
-			if (profile) {
-				// Update the profile with Sanity data
-				setUserProfile(prev => prev ? { ...prev, sanityProfile: profile } : null);
-				return profile;
+			if (sanityPersonId) {
+				try {
+					sanityProfile = await sanityClient.fetch<SanityPerson>(
+						`*[_type == "person" && _id == $id][0]`,
+						{ id: sanityPersonId }
+					);
+				} catch (sanityError) {
+					console.error('Error fetching Sanity profile:', sanityError);
+				}
 			}
 
-			return null;
+			// 4. Build the combined profile
+			const profile: UserProfile = {
+				// Base auth data
+				id: authUser.id,
+				email: authUser.email || undefined,
+				role: (authUser.user_metadata?.role as 'resident' | 'admin' | 'super_admin') || 'resident',
+				onboarding_completed: !!authUser.user_metadata?.onboarding_completed,
+
+				// Extended data if available
+				extendedData: extendedData ? {
+					emergency_contact_name: extendedData.emergency_contact_name,
+					emergency_contact_phone: extendedData.emergency_contact_phone,
+					phone_number: extendedData.phone_number,
+					last_active: extendedData.last_active
+				} : undefined,
+
+				// Sanity profile if available - properly mapping between types
+				sanityProfile: sanityProfile ? {
+					id: sanityProfile._id,
+					name: sanityProfile.name || '',
+					slug: sanityProfile.slug?.current,
+					profileImage: sanityProfile.profileImage,
+					bio: sanityProfile.bio || '',
+					fullBio: sanityProfile.fullBio ? portableTextToString(sanityProfile.fullBio) : undefined,
+					isTeamMember: sanityProfile.isTeamMember,
+					isResident: sanityProfile.isResident,
+					houseId: sanityProfile.house?._ref,
+					socialLinks: sanityProfile.socialLinks,
+					skills: sanityProfile.skills,
+					company: sanityProfile.company
+				} : undefined,
+
+				// Computed properties
+				isAdmin: authUser.user_metadata?.role === 'admin' || authUser.user_metadata?.role === 'super_admin',
+				isSuperAdmin: authUser.user_metadata?.role === 'super_admin',
+				isResident: authUser.user_metadata?.role === 'resident' || !authUser.user_metadata?.role
+			};
+
+			// Update the state
+			setUserProfile(profile);
+			return profile;
 		} catch (err) {
-			console.error('Error fetching Sanity profile:', err);
+			console.error('Unexpected error fetching user profile:', err);
 			return null;
 		} finally {
-			setIsLoadingSanityProfile(false);
+			setIsLoadingProfile(false);
 		}
 	};
 
@@ -199,27 +197,11 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 					// Set the auth user
 					setUser(session.user);
 
-					// Create the initial user profile from auth metadata
-					const metadata = session.user.user_metadata || {};
-					setUserProfile({
-						id: session.user.id,
-						email: session.user.email,
-						role: metadata.role || 'resident', // Default to resident if not set
-						sanity_person_id: metadata.sanity_person_id,
-						onboarding_completed: metadata.onboarding_completed || false
-					});
+					// Fetch the complete profile
+					await fetchUserProfile();
 
 					// Update last_active
 					updateLastActive(session.user.id);
-
-					// Load houses for the user
-					//.fetchUserHouses();
-
-					// Optionally fetch extended data if needed on initial load
-					// You might want to defer this based on the current route
-					if (pathname.startsWith('/dashboard') || pathname.includes('/profile')) {
-						fetchExtendedData();
-					}
 				}
 
 				// Set up auth state change listener
@@ -227,23 +209,11 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 					async (event, session) => {
 						if (session?.user) {
 							setUser(session.user);
-
-							// Create the user profile from auth metadata
-							const metadata = session.user.user_metadata || {};
-							setUserProfile({
-								id: session.user.id,
-								email: session.user.email,
-								role: metadata.role || 'resident',
-								sanity_person_id: metadata.sanity_person_id,
-								onboarding_completed: metadata.onboarding_completed || false
-							});
-
+							await fetchUserProfile();
 							updateLastActive(session.user.id);
-							//fetchUserHouses();
 						} else {
 							setUser(null);
 							setUserProfile(null);
-							//setHouses([]);
 						}
 
 						// Handle sign out
@@ -269,51 +239,7 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	// Revised fetchUserHouses function using role from metadata
-	// const fetchUserHouses = async (): Promise<HouseAccess[]> => {
-	// 	if (!user || !userProfile) return [];
-
-	// 	setLoadingHouses(true);
-	// 	try {
-	// 		const userRole = userProfile.role;
-	// 		let houseAccess: HouseAccess[] = [];
-
-	// 		if (userRole === 'super_admin') {
-	// 			// Super admins see all houses
-	// 			const { data: allHouses, error } = await supabase
-	// 				.from('houses')
-	// 				.select('id, name, address, image_url');
-
-	// 			if (error) throw error;
-
-	// 			if (allHouses) {
-	// 				houseAccess = allHouses.map((house: any) => ({
-	// 					id: house.id,
-	// 					name: house.name,
-	// 					address: house.address,
-	// 					image_url: house.image_url,
-	// 					accessType: 'admin' as const
-	// 				}));
-	// 			}
-	// 		} else if (userRole === 'admin') {
-	// 			// Same admin house access code as before
-	// 			// ...
-	// 		}
-
-	// 		// Rest of your house fetching logic
-	// 		// ...
-
-	// 		setHouses(houseAccess);
-	// 		return houseAccess;
-	// 	} catch (err) {
-	// 		console.error('Error fetching houses:', err);
-	// 		return [];
-	// 	} finally {
-	// 		setLoadingHouses(false);
-	// 	}
-	// };
-
-	// Auth functions (revised to use metadata)
+	// Auth functions
 	const signIn = async (email: string, password: string) => {
 		setError(null);
 		try {
@@ -362,7 +288,6 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 					.insert([
 						{
 							id: data.user.id,
-							email: email,
 							// Any other extended fields
 						}
 					]);
@@ -380,7 +305,7 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		}
 	};
 
-	// Update user profile function (handles both metadata and extended data)
+	// Update user profile function
 	const updateUserProfile = async (data: Partial<UserProfile>) => {
 		setError(null);
 		try {
@@ -391,12 +316,11 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 			}
 
 			// Separate metadata fields from extended data
-			const metadataUpdates: any = {};
-			const extendedDataUpdates: any = {};
+			const metadataUpdates: Record<string, unknown> = {};
+			const extendedDataUpdates: Record<string, unknown> = {};
 
 			// Determine which fields go where
 			if (data.role !== undefined) metadataUpdates.role = data.role;
-			if (data.sanity_person_id !== undefined) metadataUpdates.sanity_person_id = data.sanity_person_id;
 			if (data.onboarding_completed !== undefined) metadataUpdates.onboarding_completed = data.onboarding_completed;
 
 			// Handle extended data if present
@@ -434,29 +358,8 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 				}
 			}
 
-			// Update local state immediately for better UX
-			if (Object.keys(metadataUpdates).length > 0) {
-				setUserProfile(prev => {
-					if (!prev) return null;
-					return {
-						...prev,
-						...metadataUpdates
-					};
-				});
-			}
-
-			if (Object.keys(extendedDataUpdates).length > 0) {
-				setUserProfile(prev => {
-					if (!prev) return null;
-					return {
-						...prev,
-						extendedData: {
-							...prev.extendedData,
-							...extendedDataUpdates
-						}
-					};
-				});
-			}
+			// Refresh the profile to get the latest data
+			await fetchUserProfile();
 
 			return { error: null };
 		} catch (err) {
@@ -503,14 +406,9 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		user,
 		userProfile,
 		isLoading,
-		isLoadingExtendedData,
-		isLoadingSanityProfile,
+		isLoadingProfile,
 		error,
-		// houses,
-		// loadingHouses,
-		// fetchUserHouses,
-		fetchExtendedData,
-		fetchSanityProfile,
+		fetchUserProfile,
 		signIn,
 		signUp,
 		signOut,

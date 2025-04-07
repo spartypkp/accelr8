@@ -123,41 +123,211 @@ This platform will be critical to maintaining operational efficiency during expa
 
 ## Data Architecture: Sanity CMS & Supabase Integration
 
-We've implemented a dual-database architecture that leverages the strengths of both Sanity CMS and Supabase. This design clearly separates content from application data while maintaining seamless integration between the two systems.
+We've implemented a sophisticated dual-database architecture that leverages the strengths of both Sanity CMS and Supabase while maintaining strong type safety through TypeScript.
 
 ### Architecture Overview
 
-#### Sanity CMS: Content Management
+#### Core Principles 
+
+1. **Single Source of Truth**: Each data entity has one primary location
+   - Sanity: Content, public-facing data, media assets
+   - Supabase: Operational data, user authentication, transactions
+
+2. **Type Extension Pattern**: Composite types extend base types using TypeScript interfaces
+   - Base types directly reflect database schemas
+   - Composite types normalize and combine data from both sources
+
+3. **Clear Data Origin**: Each property's source system is explicit and traceable
+   - Properties are grouped by their origin
+   - Naming conventions identify the data source
+
+4. **Normalized Properties**: Consistent naming across systems
+   - camelCase for all TypeScript interfaces
+   - snake_case for Supabase database
+   - Consistent property transformations
+
+### Sanity CMS: Content Management
+
 Sanity handles all **public-facing, editable content** that benefits from an editorial workflow:
 
-- Marketing content (homepage, about page, etc.)
-- Rich media assets (images, videos)
-- Blog posts and resources
-- House information and amenities
-- Team and resident public profiles
-- Testimonials and success stories
-- Public events and programs
+- **House Profiles**: Descriptions, images, amenities, location details
+- **Room Types**: Standard configurations, features, images
+- **Person Profiles**: Public resident/team information
+- **Public Events**: Organization activities, programs, hackathons
+- **Media Assets**: Images, documents, videos
 
-#### Supabase: Application Data & Operational Management
+Sanity offers several advantages for this content:
+
+- Rich editorial interface with customizable workflows
+- Powerful image handling with hotspot support
+- Structured content with references between types
+- Version history and collaboration tools
+
+### Supabase: Application Data & Operations
+
 Supabase manages all **transactional, operational, and user-specific data**:
 
-- User authentication and profiles
-- Resident applications and onboarding
-- Room management and assignments
-- Maintenance requests
-- Internal communications
-- Resource bookings
-- Financial transactions
-- Analytics data
+- **Authentication**: User accounts, roles, permissions
+- **House Operations**: WiFi passwords, access codes, occupancy stats
+- **Room Instances**: Current status, resident assignments, leases
+- **Internal Events**: House meetings, private gatherings
+- **Applications**: Prospective resident applications, interviews
+- **Bookings & Transactions**: Resource reservations, payments
 
-### How They Work Together
+Supabase advantages for operational data:
 
-The two systems are integrated through:
+- Real-time updates via subscriptions
+- Row-level security for fine-grained access control
+- PostgreSQL for robust relational data
+- Serverless functions for business logic
 
-1. **Reference IDs**: Supabase records contain Sanity document IDs to reference content
-2. **Unified API Layer**: Our Next.js application queries both systems and combines results
-3. **Content Caching**: Sanity content is cached using ISR (Incremental Static Regeneration)
-4. **Real-time Updates**: Supabase subscriptions provide real-time data for dashboards
+### Type System Architecture
+
+Our type system follows a clean extension pattern where composite types integrate data from both sources:
+
+```typescript
+// Base Sanity type
+interface SanityHouse {
+  _id: string;
+  name: string;
+  slug: { current: string };
+  // Other Sanity fields...
+}
+
+// Base Supabase type
+interface SupabaseHouseOperations {
+  id: string;
+  sanity_house_id: string;
+  status: string;
+  // Other Supabase fields...
+}
+
+// Composite type using extension
+interface House extends Omit<SanityHouse, '_id' | 'slug'> {
+  // Normalized Sanity properties
+  id: string; // renamed from _id
+  slug: string; // simplified from slug.current
+  
+  // Add operational data from Supabase
+  operations?: {
+    id: string;
+    status: 'operational' | 'maintenance' | 'planned_closure';
+    // Other normalized operational fields...
+  };
+  
+  // Computed properties
+  isActive: boolean;
+  occupancyRate?: number;
+}
+```
+
+This pattern provides several benefits:
+
+1. **Type safety** - Changes to base schemas automatically propagate to composite types
+2. **Clear data lineage** - Properties are traceable to their origin
+3. **Normalized interfaces** - Consistent property naming across the application
+4. **Computed properties** - Derived data based on multiple sources
+
+### Data Fetching Pattern
+
+Data is fetched from both systems and combined into composite objects:
+
+```typescript
+// Example: Fetching a house with operations data
+async function getHouseData(houseId: string): Promise<House> {
+  // Fetch data in parallel
+  const [sanityHouse, operations] = await Promise.all([
+    // Get content from Sanity
+    sanityClient.fetch(`*[_type == "house" && _id == $id][0]`, { id: houseId }),
+    
+    // Get operations data from Supabase
+    supabase.from('house_operations')
+      .select('*')
+      .eq('sanity_house_id', houseId)
+      .single()
+      .then(result => result.data)
+  ]);
+  
+  // Convert to composite type
+  return convertSanityHouse(sanityHouse, operations);
+}
+```
+
+### Reference Management
+
+Cross-database references are managed through ID fields:
+
+1. **Sanity → Supabase**: Reference fields in Supabase tables link to Sanity IDs
+   - Example: `sanity_house_id` in the rooms table references a Sanity house document
+
+2. **Supabase → Sanity**: User profiles in Supabase can link to Sanity person documents
+   - Example: User metadata contains `sanity_person_id` to reference their public profile
+
+### Caching Strategy
+
+A tiered caching approach optimizes performance:
+
+1. **Content (Sanity)**: 
+   - Incremental Static Regeneration (ISR) for public content
+   - Longer cache lifetimes for stable content
+
+2. **Operational Data (Supabase)**:
+   - SWR (stale-while-revalidate) for frequently changing data
+   - Real-time subscriptions for critical updates
+
+3. **Composite Objects**:
+   - In-memory or Redis caching for frequently accessed composites
+   - Cache invalidation triggered by changes in either system
+
+### Real-time Updates
+
+For dynamic features, we use Supabase's real-time capabilities:
+
+```typescript
+// Subscribe to room status changes
+function subscribeToRoomStatus(roomId: string, onUpdate: (room: Room) => void) {
+  return supabase
+    .from('rooms')
+    .on('UPDATE', async (payload) => {
+      if (payload.new.id === roomId) {
+        // Fetch the complete room data and notify
+        const room = await getRoomWithDetails(roomId);
+        onUpdate(room);
+      }
+    })
+    .subscribe();
+}
+```
+
+### Entity Relationships
+
+Our core entity model consists of these primary types:
+
+1. **User/Person**
+   - Authentication in Supabase
+   - Extended profile in `accelr8_users` table
+   - Public profile in Sanity `person` documents
+   - Joined through references in auth metadata
+
+2. **House**
+   - Content details in Sanity `house` documents
+   - Operational data in `house_operations` table
+   - Joined through `sanity_house_id` references
+
+3. **Room**
+   - Type definition in Sanity `roomType` documents
+   - Instances in Supabase `rooms` table
+   - Joined through `sanity_room_type_id` references
+
+4. **Event**
+   - Public events in Sanity `event` documents
+   - Internal events in `house_events` table
+   - Optional cross-reference through `sanity_event_id`
+
+5. **Application**
+   - Entirely in Supabase with `applications` table
+   - References to Sanity houses through `preferred_houses`
+   - Creates Sanity person when approved
 
 ## Sanity CMS Schema
 
@@ -238,158 +408,549 @@ Sanity is configured with the following primary content types:
 
 ## Supabase Schema
 
-Supabase handles the operational and transactional aspects of the platform with these core tables:
+Supabase handles the operational and transactional aspects of the platform with a comprehensive set of tables:
 
 ### Core Tables
 
 1. **accelr8_users**
-   - Extends Supabase auth.users
-   - Links to Sanity Person record
-   - Role and permissions
-   - Contact information
-   - Emergency contacts
-   - Onboarding status
+   - Extends Supabase auth.users with UUID reference
+   - Emergency contact information
+   - Phone number and activity tracking
+   - Created/updated timestamps with automatic management
 
-2. **rooms**
-   - References Sanity House ID
-   - Room number and type
-   - Occupancy details
+2. **house_operations**
+   - References Sanity House ID for content integration
+   - Operational status tracking ('open', 'planned', 'closed')
+   - Current occupancy metrics
+   - WiFi and access information (securely stored)
+   - Contact information for maintenance and emergencies
+   - Cleaning schedule and operational notes
+
+3. **rooms**
+   - References both Sanity house and room type IDs
+   - Room number and floor information
+   - Status tracking (available, occupied, maintenance, reserved)
+   - Current resident reference
    - Pricing information
-   - Availability status
-   - Floor and square footage
+   - Lease period tracking
+   - Maintenance history and inventory
 
-3. **residencies**
-   - Links users to rooms and houses
-   - Tracks occupancy periods
-   - Rental terms
-   - Payment tracking
-   - Move-in/out information
+4. **house_events**
+   - House-specific or global events
+   - Optional reference to Sanity event for public events
+   - Scheduling information (start/end times)
+   - Mandatory flag for required attendance
+   - Participant count and capacity tracking
+   - Status management (scheduled, in progress, completed, cancelled)
 
-4. **applications**
-   - Prospective resident applications
-   - Application status tracking
-   - References to preferred houses
-   - Reviewer notes
-   - Interview scheduling
-   - Custom form responses
-
-5. **maintenance_requests**
-   - Issue reporting
-   - Status tracking
-   - Severity and categorization
-   - Resolution notes
-   - Associated rooms and houses
-
-6. **resource_bookings**
-   - Booking system for shared resources
-   - References Sanity resources
-   - Scheduling information
-   - User associations
-   - Status tracking
-
-7. **internal_events**
-   - House-specific private events
-   - Organizational gatherings
-   - Meeting scheduling
-   - Attendee management
-
-8. **event_participants**
-   - RSVP tracking
-   - Attendance records
+5. **event_participants**
+   - RSVP tracking with status options
+   - Timestamp of RSVP submission
+   - Attendance verification
    - Feedback collection
 
-9. **announcements**
-   - Internal communications
-   - Targeted messaging
-   - Priority levels
-   - Duration settings
+6. **external_participants**
+   - For public events with non-resident attendees
+   - Basic contact information
+   - Registration and check-in tracking
 
-10. **payments**
-    - Financial transactions
-    - Payment status tracking
-    - Receipt generation
-    - Payment method information
+7. **applications**
+   - Prospective resident application process
+   - Comprehensive status tracking (9 different statuses)
+   - Preferred move-in date and duration
+   - Preferred houses (array of Sanity house IDs)
+   - Form responses as JSONB for flexible schema
+   - Professional links (LinkedIn, GitHub, portfolio)
+   - Application review metadata
+   - House/room assignment tracking
 
-11. **activity_logs**
-    - System-wide audit trail
-    - User action tracking
-    - Security monitoring
+8. **application_interviews**
+   - Interview scheduling and completion tracking
+   - Duration and interviewer assignment
+   - Status options (scheduled, completed, cancelled, rescheduled, no-show)
+   - Notes and impression rating system
+
+### Database Features
+
+Our schema leverages PostgreSQL's advanced features:
+
+1. **Automatic Timestamps**
+   - Custom function and triggers for all `updated_at` fields
+   - Consistent timestamp handling across tables
+
+2. **Referential Integrity**
+   - Foreign key constraints with appropriate cascade behaviors
+   - UUID references to auth.users
+
+3. **Data Validation**
+   - CHECK constraints for status fields
+   - Unique constraints for preventing duplicates
+   - NOT NULL constraints for required fields
+
+4. **JSONB Storage**
+   - Flexible schema for form responses
+   - Structured data for contacts and schedules
 
 ### Complete SQL Schema
 
-A full SQL schema for Supabase is maintained in the repository under `scripts/schema.sql`.
+The full SQL schema implements these tables with proper constraints and relationships:
+
+```sql
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Function for automatically updating timestamps
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Core user data extending auth.users
+CREATE TABLE accelr8_users (
+  id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  phone_number TEXT,
+  onboarding_completed BOOLEAN DEFAULT FALSE,
+  last_active TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- House operations data
+CREATE TABLE house_operations (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  sanity_house_id TEXT NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('open', 'planned', 'closed')),
+  current_occupancy INTEGER DEFAULT 0,
+  wifi_network TEXT,
+  wifi_password TEXT,
+  access_code TEXT,
+  emergency_contacts JSONB,
+  maintenance_contacts JSONB,
+  cleaning_schedule JSONB,
+  operational_notes TEXT,
+  last_inspection_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Room instances
+CREATE TABLE rooms (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  sanity_house_id TEXT NOT NULL,
+  sanity_room_type_id TEXT NOT NULL,
+  room_number TEXT NOT NULL,
+  floor INTEGER,
+  status TEXT NOT NULL CHECK (status IN ('available', 'occupied', 'maintenance', 'reserved')),
+  current_resident_id UUID REFERENCES accelr8_users(id),
+  current_price DECIMAL(10,2),
+  lease_start_date DATE,
+  lease_end_date DATE,
+  last_maintenance_date DATE,
+  maintenance_notes TEXT,
+  last_cleaned_date DATE,
+  inventory_items JSONB,
+  special_notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (sanity_house_id, room_number)
+);
+
+-- Internal events
+CREATE TABLE house_events (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  sanity_event_id TEXT,
+  sanity_house_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ NOT NULL,
+  location TEXT,
+  is_mandatory BOOLEAN DEFAULT FALSE,
+  created_by UUID REFERENCES accelr8_users(id),
+  max_participants INTEGER,
+  current_participants INTEGER DEFAULT 0,
+  notes TEXT,
+  status TEXT NOT NULL CHECK (status IN ('scheduled', 'in_progress', 'completed', 'cancelled')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Event participation tracking
+CREATE TABLE event_participants (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  event_id UUID REFERENCES house_events(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES accelr8_users(id) ON DELETE CASCADE,
+  rsvp_status TEXT NOT NULL CHECK (rsvp_status IN ('attending', 'maybe', 'declined', 'no_response')),
+  rsvp_time TIMESTAMPTZ DEFAULT NOW(),
+  attended BOOLEAN,
+  feedback TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(event_id, user_id)
+);
+
+-- External event registration
+CREATE TABLE external_participants (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  event_id UUID REFERENCES house_events(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT NOT NULL,
+  company TEXT,
+  registration_time TIMESTAMPTZ DEFAULT NOW(),
+  checkin_time TIMESTAMPTZ,
+  notes TEXT,
+  UNIQUE(event_id, email)
+);
+
+-- Resident applications
+CREATE TABLE applications (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  email TEXT NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  status TEXT NOT NULL CHECK (status IN (
+    'draft', 
+    'submitted', 
+    'reviewing', 
+    'interview_scheduled', 
+    'interview_completed', 
+    'approved', 
+    'rejected', 
+    'waitlisted',
+    'accepted',
+    'cancelled'
+  )),
+  preferred_move_in DATE,
+  preferred_duration TEXT CHECK (preferred_duration IN ('1-3 months', '3-6 months', '6-12 months', '12+ months')),
+  preferred_houses TEXT[],
+  bio TEXT,
+  responses JSONB,
+  current_role TEXT,
+  company TEXT,
+  linkedin_url TEXT,
+  github_url TEXT,
+  portfolio_url TEXT,
+  resume_url TEXT,
+  submitted_at TIMESTAMPTZ,
+  referral_source TEXT,
+  admin_notes TEXT,
+  rejection_reason TEXT,
+  reviewed_by UUID REFERENCES accelr8_users(id),
+  reviewed_at TIMESTAMPTZ,
+  assigned_house_id TEXT,
+  assigned_room_id UUID,
+  sanity_person_id TEXT,
+  user_id UUID,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Application interviews
+CREATE TABLE application_interviews (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  application_id UUID REFERENCES applications(id) ON DELETE CASCADE,
+  interviewer_id UUID REFERENCES accelr8_users(id),
+  scheduled_time TIMESTAMPTZ,
+  completed_time TIMESTAMPTZ,
+  duration_minutes INTEGER,
+  status TEXT CHECK (status IN ('scheduled', 'completed', 'cancelled', 'rescheduled', 'no_show')),
+  interview_notes TEXT,
+  overall_impression TEXT CHECK (overall_impression IN ('strong_yes', 'yes', 'maybe', 'no', 'strong_no')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create triggers for updated_at timestamps
+CREATE TRIGGER update_accelr8_users_updated_at BEFORE UPDATE ON accelr8_users 
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_house_operations_updated_at BEFORE UPDATE ON house_operations
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_rooms_updated_at BEFORE UPDATE ON rooms
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_house_events_updated_at BEFORE UPDATE ON house_events
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_event_participants_updated_at BEFORE UPDATE ON event_participants
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_applications_updated_at BEFORE UPDATE ON applications
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_application_interviews_updated_at BEFORE UPDATE ON application_interviews
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+```
 
 ## Implementation Strategy for Data Integration
+
+We've implemented a comprehensive integration strategy that leverages the type extension pattern to seamlessly combine data from Sanity CMS and Supabase.
+
+### Type-First Development Approach
+
+Our implementation follows a "type-first" development approach:
+
+1. **Define Base Types**: 
+   - Create TypeScript interfaces that directly match database schemas
+   - Generate Sanity types using their schema-to-typescript tools
+   - Define Supabase types that match SQL tables
+
+2. **Create Composite Types**:
+   - Extend base types using TypeScript's `extends` and `Omit` patterns
+   - Normalize property names with consistent conventions
+   - Add computed properties that derive from multiple sources
+
+3. **Build Utility Functions**:
+   - Create converter functions to transform raw data into composite types
+   - Implement fetch helpers that retrieve and combine data
+   - Handle error cases and fallbacks
 
 ### Authentication Flow
 
 1. User authentication happens exclusively through Supabase Auth
 2. After authentication, the application:
-   - Fetches the user profile from Supabase
+   - Fetches user metadata including role and `sanity_person_id` 
+   - Retrieves the extended profile from `accelr8_users` table
    - If applicable, fetches the corresponding public profile from Sanity
-   - Combines data for a complete user context
-
-### Content Delivery
-
-1. **Public Website**:
-   - Static content from Sanity is pre-rendered using Next.js ISR
-   - Dynamic, personalized content may combine Sanity content with Supabase data
-   - Media assets (images, videos) are served through Sanity's CDN
-
-2. **Dashboards**:
-   - Operational data comes from Supabase (with real-time subscriptions where needed)
-   - Content references fetch enriched data from Sanity when needed
-   - House information, descriptions, and media are pulled from Sanity
-
-### API Structure
-
-Our implementation provides several utility functions for accessing both systems:
+   - Combines all data into a unified `UserProfile` object
 
 ```typescript
-// Example of a unified data fetcher
-async function getHouseWithResidents(houseId: string) {
-  // Get house details from Sanity
-  const houseDetails = await sanityClient.fetch(`
-    *[_type == "house" && _id == $houseId][0]
-  `, { houseId });
+// Example user profile integration
+async function getUserProfile(userId: string): Promise<UserProfile | null> {
+  try {
+    // Get auth data and metadata
+    const { data: authData } = await supabase.auth.getUser(userId);
+    if (!authData?.user) return null;
+    
+    // Get extended data from accelr8_users table
+    const { data: extendedData } = await supabase
+      .from('accelr8_users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    // Get Sanity profile if ID exists
+    let sanityProfile = null;
+    if (authData.user.user_metadata?.sanity_person_id) {
+      sanityProfile = await sanityClient.fetch(
+        `*[_type == "person" && _id == $id][0]`,
+        { id: authData.user.user_metadata.sanity_person_id }
+      );
+    }
+    
+    // Create the composite user profile
+    return {
+      id: authData.user.id,
+      email: authData.user.email,
+      role: authData.user.user_metadata?.role || 'resident',
+      onboarding_completed: authData.user.user_metadata?.onboarding_completed || false,
+      
+      // Add extended data if available
+      extendedData: extendedData ? {
+        emergency_contact_name: extendedData.emergency_contact_name,
+        emergency_contact_phone: extendedData.emergency_contact_phone,
+        phone_number: extendedData.phone_number,
+        last_active: extendedData.last_active
+      } : undefined,
+      
+      // Add Sanity profile if available
+      sanityProfile: sanityProfile ? {
+        id: sanityProfile._id,
+        name: sanityProfile.name,
+        slug: sanityProfile.slug?.current,
+        profileImage: sanityProfile.profileImage,
+        bio: sanityProfile.bio,
+        // ...other fields
+      } : undefined,
+      
+      // Computed properties
+      isAdmin: authData.user.user_metadata?.role === 'admin' || 
+               authData.user.user_metadata?.role === 'super_admin',
+      isSuperAdmin: authData.user.user_metadata?.role === 'super_admin',
+      isResident: authData.user.user_metadata?.role === 'resident'
+    };
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    return null;
+  }
+}
+```
+
+### Content Delivery Strategy
+
+#### Public Website
+For public-facing pages, we implement a hybrid rendering approach:
+
+1. **Static Content**: 
+   - Use Next.js Static Site Generation (SSG) with revalidation
+   - Fetch Sanity content at build time with incremental updates
+   - Pre-render pages for optimal performance
+
+```typescript
+// Example of fetching houses for public display
+export async function getStaticProps() {
+  const houses = await sanityClient.fetch(`
+    *[_type == "house" && active == true] {
+      _id,
+      name,
+      slug,
+      mainImage,
+      shortDescription,
+      "location": location {
+        city,
+        state
+      }
+    }
+  `);
   
-  // Get current residents from Supabase
-  const { data: residents } = await supabaseClient
-    .from('residencies')
-    .select(`
-      id,
-      accelr8_users (
-        id,
-        email,
-        sanity_person_id
-      )
-    `)
-    .eq('sanity_house_id', houseId)
-    .eq('status', 'active');
-    
-  // Fetch additional resident details from Sanity if needed
-  const residentIds = residents.map(r => r.accelr8_users.sanity_person_id).filter(Boolean);
-  const residentDetails = residentIds.length > 0 
-    ? await sanityClient.fetch(`
-        *[_type == "person" && _id in $ids]{ _id, name, image, bio }
-      `, { ids: residentIds })
-    : [];
-    
-  // Combine the data
   return {
-    ...houseDetails,
-    residents: residents.map(r => {
-      const sanityProfile = residentDetails.find(p => p._id === r.accelr8_users.sanity_person_id);
-      return {
-        id: r.accelr8_users.id,
-        email: r.accelr8_users.email,
-        residencyId: r.id,
-        ...sanityProfile
-      };
-    })
+    props: { houses },
+    revalidate: 3600 // Revalidate every hour
   };
 }
 ```
+
+2. **Dynamic Content**:
+   - For personalized or real-time data, use client-side fetching
+   - Combine static Sanity content with dynamic Supabase data
+   - Implement SWR pattern for optimal user experience
+
+```typescript
+// Example: Room availability on house page
+function RoomAvailability({ roomTypeId }) {
+  const { data, error } = useSWR(
+    `/api/rooms/availability?roomTypeId=${roomTypeId}`,
+    fetcher,
+    { refreshInterval: 60000 } // Refresh every minute
+  );
+  
+  // Rest of component implementation
+}
+```
+
+#### Dashboard Features
+
+For authenticated dashboard features, we implement:
+
+1. **Real-time Updates**:
+   - Use Supabase subscriptions for live operational data
+   - Update UI reactively as data changes
+   - Optimize for responsiveness
+
+```typescript
+// Example: Event RSVP counter
+function EventRSVPCounter({ eventId }) {
+  const [count, setCount] = useState(0);
+  
+  useEffect(() => {
+    // Initial count
+    fetchCurrentCount();
+    
+    // Subscribe to changes
+    const subscription = supabase
+      .from('event_participants')
+      .on('INSERT', () => fetchCurrentCount())
+      .on('DELETE', () => fetchCurrentCount())
+      .subscribe();
+      
+    return () => supabase.removeSubscription(subscription);
+  }, [eventId]);
+  
+  async function fetchCurrentCount() {
+    const { count } = await supabase
+      .from('event_participants')
+      .select('*', { count: 'exact' })
+      .eq('event_id', eventId)
+      .eq('rsvp_status', 'attending');
+      
+    setCount(count);
+  }
+  
+  return <div>Attending: {count} people</div>;
+}
+```
+
+2. **Combined Data Views**:
+   - Fetch and merge data from both sources
+   - Transform into strongly-typed composite objects
+   - Present unified interfaces to components
+
+```typescript
+// Example API route that combines data
+export async function getRoom(req, res) {
+  const { roomId } = req.query;
+  
+  try {
+    // Get room data from Supabase
+    const { data: roomData, error } = await supabase
+      .from('rooms')
+      .select('*')
+      .eq('id', roomId)
+      .single();
+      
+    if (error) throw error;
+    
+    // Get room type from Sanity
+    const roomType = await sanityClient.fetch(`
+      *[_type == "roomType" && _id == $id][0]
+    `, { id: roomData.sanity_room_type_id });
+    
+    // Get house data from Sanity
+    const house = await sanityClient.fetch(`
+      *[_type == "house" && _id == $id][0]{
+        _id, name, location
+      }
+    `, { id: roomData.sanity_house_id });
+    
+    // Convert to composite Room object
+    const room = convertToRoomType(roomData, roomType, house);
+    
+    res.status(200).json(room);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+}
+```
+
+### Data Synchronization
+
+For key entities that exist in both systems, we implement sync mechanisms:
+
+1. **User/Person Creation**:
+   - When a user is approved from an application, create both:
+     - Supabase auth user with appropriate role
+     - Sanity person document with public profile
+     - Link them via reference IDs
+
+2. **Event Publishing**:
+   - Internal events can be "published" to create Sanity documents
+   - Public events can have internal operational data in Supabase
+   - Maintain references between systems via IDs
+
+3. **Webhooks**:
+   - Sanity webhooks trigger updates for critical content changes
+   - Next.js API routes process webhook data and update Supabase
+   - Handle synchronization of key reference data
+
+### Error Handling and Resilience
+
+Our implementation includes robust error handling and resilience mechanisms:
+
+1. **Graceful Degradation**:
+   - Components can render with partial data if one source fails
+   - Fallback strategies use available data from either system
+   - Clear error boundaries prevent cascading failures
+
+2. **Data Validation**:
+   - TypeScript interfaces enforce correct data structures
+   - Runtime validation ensures data integrity
+   - Conversion functions handle missing or malformed data
 
 ## Main Website Requirements
 
@@ -731,3 +1292,232 @@ For managing the entire Accelr8 operation across all houses:
 - Store core user data in Supabase
 - Create public profiles in Sanity when needed
 - Link with consistent IDs
+
+## TypeScript Types
+
+Our TypeScript type system provides a robust foundation for the application, emphasizing type safety, clarity, and maintainability.
+
+### Architecture
+
+The type system follows a clean extension pattern with three layers:
+
+1. **Base Types**: Direct reflections of database structures
+   - `SanityHouse`, `SupabaseHouseOperations`, etc.
+   - Generated from schemas or manually defined to match DB tables
+
+2. **Composite Types**: Extended types that combine sources
+   - `House`, `Room`, `Event`, etc.
+   - Normalize property names and add computed properties
+
+3. **Utility Types**: Supporting types and shared interfaces 
+   - Common enums, shared interfaces, helper types
+
+
+
+### Type Extension Pattern
+
+Our composite types follow a consistent pattern that extends base types:
+
+```typescript
+// Example from src/lib/types.ts
+import { House as SanityHouse } from "./sanity.types";
+
+// Base Supabase type
+export interface SupabaseHouseOperations {
+  id: string;
+  sanity_house_id: string;
+  status: 'open' | 'planned' | 'closed';
+  current_occupancy: number;
+  wifi_network?: string;
+  wifi_password?: string;
+  access_code?: string;
+  emergency_contacts?: Record<string, any>;
+  maintenance_contacts?: Record<string, any>;
+  cleaning_schedule?: Record<string, any>;
+  operational_notes?: string;
+  last_inspection_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Composite type extending Sanity type with operational data
+export interface House extends Omit<SanityHouse, '_id' | 'slug'> {
+  // Normalized properties from Sanity
+  id: string; // renamed from _id
+  slug: string; // simplified from slug.current
+
+  // Add operational data from Supabase
+  operations?: Omit<SupabaseHouseOperations, 'sanity_house_id' | 'created_at' | 'updated_at'> & {
+    // Normalized properties from Supabase
+    status: 'operational' | 'maintenance' | 'planned_closure' | 'renovation';
+    currentOccupancy: number;
+    wifiNetwork?: string; // camelCase version of wifi_network 
+    wifiPassword?: string;
+    accessCode?: string;
+    lastInspectionDate?: string;
+  };
+
+  // Computed properties
+  isActive: boolean; // derived from active flag and operations status
+  occupancyRate?: number; // calculated as currentOccupancy / capacity
+}
+```
+
+### Key Benefits
+
+This pattern provides several advantages:
+
+1. **Type Safety**: Properties are automatically updated when base types change
+2. **Clarity**: Clear separation between content and operational data
+3. **Normalization**: Consistent property naming (camelCase) across the app
+4. **Documentation**: Self-documenting code with type definitions
+5. **Intellisense**: Better developer experience with autocomplete
+
+### Unified User Types
+
+User management is particularly complex as it spans authentication, extended data, and public profiles:
+
+```typescript
+// Base Supabase user data from auth.users (via metadata)
+export interface SupabaseAuthUser {
+  id: string;
+  email?: string;
+  role: 'resident' | 'admin' | 'super_admin';
+  sanity_person_id?: string;
+  onboarding_completed: boolean;
+}
+
+// Extended user data from accelr8_users table
+export interface SupabaseExtendedUser {
+  id: string; // References auth.users(id)
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  phone_number?: string;
+  last_active?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// Composite user profile type
+export interface UserProfile {
+  // Base auth data (from SupabaseAuthUser)
+  id: string;
+  email?: string;
+  role: 'resident' | 'admin' | 'super_admin';
+  onboarding_completed: boolean;
+
+  // Extended data (from SupabaseExtendedUser)
+  extendedData?: {
+    emergency_contact_name?: string;
+    emergency_contact_phone?: string;
+    phone_number?: string;
+    last_active?: string;
+  };
+
+  // Public profile data (from SanityPerson)
+  sanityProfile?: {
+    id: string; // Renamed from _id
+    name: string;
+    slug?: string; // Simplified from slug.current
+    profileImage?: SanityImage;
+    bio?: string;
+    fullBio?: string;
+    isTeamMember?: boolean;
+    isResident?: boolean;
+    houseId?: string; // Simplified from house._ref
+    socialLinks?: {
+      twitter?: string;
+      linkedin?: string;
+      github?: string;
+      website?: string;
+    };
+    skills?: string[];
+    company?: string;
+  };
+
+  // Computed properties
+  isAdmin: boolean; // derived from role
+  isSuperAdmin: boolean; // derived from role 
+  isResident: boolean; // derived from role
+}
+```
+
+### Rooms and Events
+
+Rooms and events illustrate the power of combining entities across systems:
+
+```typescript
+// Room example showing combined operational data with content type reference
+export interface Room extends Omit<SupabaseRoom,
+  'sanity_house_id' | 'sanity_room_type_id' | 'room_number' |
+  'current_resident_id' | 'current_price' | 'lease_start_date' |
+  'lease_end_date' | 'last_maintenance_date' | 'last_cleaned_date' |
+  'inventory_items' | 'special_notes' | 'created_at' | 'updated_at'> {
+
+  // Normalized properties from Supabase
+  roomNumber: string; // renamed from room_number
+  currentResidentId?: string;
+  currentPrice?: number;
+  leaseStartDate?: string;
+  leaseEndDate?: string;
+  // ...other normalized properties
+
+  // Room type data from Sanity
+  type: Omit<SanityRoomType, '_id' | 'house'> & {
+    id: string; // renamed from _id
+  };
+
+  // House reference data from Sanity
+  house: {
+    id: string; // renamed from _id
+    name: string;
+    location?: {
+      city?: string;
+      state?: string;
+    };
+  };
+
+  // Computed properties
+  isAvailable: boolean; // derived from status
+  pricePerMonth: number; // currentPrice or type.basePrice
+  daysUntilAvailable?: number; // calculated from leaseEndDate if occupied
+}
+
+// Event example showing unified type handling
+export interface Event {
+  // Common properties
+  id: string; // Sanity _id or Supabase id
+  title: string;
+  description?: string;
+  startDateTime: string; // ISO datetime string from either source
+  endDateTime: string; // ISO datetime string from either source
+  location?: string;
+  houseId?: string; // Sanity house _ref or Supabase sanity_house_id
+  houseName?: string; // Derived from house reference
+
+  // Source-specific properties
+  sanityData?: Omit<SanityEvent, '_id' | 'house' | 'startDateTime' | 'endDateTime' | 'title' | 'shortDescription'> & {
+    slug?: string; // simplified from slug.current
+    isGlobal: boolean;
+    isPublic: boolean;
+  };
+
+  operationalData?: Omit<SupabaseHouseEvent,
+    'id' | 'sanity_event_id' | 'sanity_house_id' | 'title' |
+    'description' | 'start_time' | 'end_time' | 'location' |
+    'created_at' | 'updated_at'> & {
+      isMandatory: boolean; // renamed from is_mandatory
+      // ...other operational data
+    };
+
+  // Source indicator
+  source: 'sanity' | 'supabase' | 'both';
+
+  // Computed properties
+  isPast: boolean; // Based on current time vs endDateTime
+  isOngoing: boolean; // Based on current time between start/end
+  isUpcoming: boolean; // Based on current time vs startDateTime
+  daysUntil?: number; // Days until event starts
+}
+```
+
