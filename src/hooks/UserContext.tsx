@@ -8,7 +8,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { createContext, useContext, useEffect, useState } from 'react';
 
 // Type for extended data from accelr8_users table
-type ExtendedUserData = {
+type SupabaseUserData = {
 	emergency_contact_name?: string;
 	emergency_contact_phone?: string;
 	phone_number?: string;
