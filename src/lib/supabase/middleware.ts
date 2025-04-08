@@ -1,5 +1,21 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { UserRole } from '../types';
+
+// Role hierarchy for permission checks
+// Higher number = more permissions
+const roleHierarchy: Record<UserRole, number> = {
+	applicant: 0,
+	resident: 1,
+	admin: 2,
+	super_admin: 3
+};
+
+// Check if user has sufficient permissions
+function hasRolePermission(userRole: UserRole, requiredRole?: UserRole): boolean {
+	if (!requiredRole) return true;
+	return roleHierarchy[userRole] >= roleHierarchy[requiredRole];
+}
 
 export async function updateSession(request: NextRequest) {
 	// Create a response object that we'll modify
@@ -66,22 +82,35 @@ export async function updateSession(request: NextRequest) {
 		return NextResponse.redirect(redirectUrl);
 	}
 
-	// All authentication checks passed for non-specific routes
-	if (!pathname.match(/\/dashboard\/([^\/]+)(\/.*)?/)) {
+	// Get user role with default as applicant
+	const userRole = (user.user_metadata?.role || 'applicant') as UserRole;
+
+	// Handle application-specific routes
+	if (pathname.startsWith('/dashboard/applications')) {
+		// Everyone can access applications routes
 		return response;
 	}
 
-	// Extract houseId from the path
+	// Handle profile and settings routes
+	if (pathname === '/dashboard/profile' || pathname === '/dashboard/settings') {
+		// All authenticated users can access profile and settings
+		return response;
+	}
+
+	// Check for house-specific routes
 	const dashboardPathRegex = /\/dashboard\/([^\/]+)(\/.*)?/;
 	const match = pathname.match(dashboardPathRegex);
-	const houseId = match ? match[1] : null;
+
+	// Just the main dashboard route
+	if (!match) {
+		return response;
+	}
+
+	const houseId = match[1];
 
 	if (!houseId) {
 		return response;
 	}
-
-
-	const userRole = user.user_metadata.role;
 
 	// Super admins can access everything
 	if (userRole === 'super_admin') {
@@ -92,8 +121,14 @@ export async function updateSession(request: NextRequest) {
 	const isAdminRoute = pathname.includes(`/dashboard/${houseId}/admin`);
 
 	// Admin routes - only accessible by admins
-	if (isAdminRoute && userRole !== 'admin' && userRole !== 'super_admin') {
+	if (isAdminRoute && !hasRolePermission(userRole, 'admin')) {
 		return NextResponse.redirect(new URL(`/dashboard/${houseId}/resident`, request.url));
+	}
+
+	// Applicants cannot access house-specific routes except in read-only mode
+	if (userRole === 'applicant') {
+		// For now, redirect applicants back to the main dashboard
+		return NextResponse.redirect(new URL('/dashboard', request.url));
 	}
 
 	// Check if user has access to this specific house
@@ -128,7 +163,7 @@ export async function updateSession(request: NextRequest) {
 
 	// If no access, redirect to houses selection page
 	if (!userHasAccess) {
-		return NextResponse.redirect(new URL('/houses', request.url));
+		return NextResponse.redirect(new URL('/dashboard', request.url));
 	}
 
 	return response;

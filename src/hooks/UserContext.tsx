@@ -1,6 +1,6 @@
 'use client';
 
-import { getAuthenticatedUser, updateUser } from '@/lib/api/users';
+import { createUser, getAuthenticatedUser, updateUser } from '@/lib/api/users';
 import { createSanityClient } from '@/lib/sanity/client';
 import { createClient } from '@/lib/supabase/client';
 import { UserProfile } from '@/lib/types';
@@ -33,6 +33,7 @@ export type UserContextType = {
 	isAdmin: boolean;
 	isSuperAdmin: boolean;
 	isResident: boolean;
+	isApplicant: boolean;
 };
 
 // Create the context
@@ -50,7 +51,8 @@ const UserContext = createContext<UserContextType>({
 	updateUserProfile: async () => ({ error: new Error('Not implemented') }),
 	isAdmin: false,
 	isSuperAdmin: false,
-	isResident: false
+	isResident: false,
+	isApplicant: false
 });
 
 // Provider component
@@ -70,6 +72,7 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 	const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'super_admin' || false;
 	const isSuperAdmin = userProfile?.role === 'super_admin' || false;
 	const isResident = userProfile?.role === 'resident' || false;
+	const isApplicant = userProfile?.role === 'applicant' || false;
 
 	// Function to update last_active timestamp
 	const updateLastActive = async (userId: string) => {
@@ -189,7 +192,7 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 				password,
 				options: {
 					data: {
-						role: 'resident', // Default role
+						role: 'applicant', // New default role
 						onboarding_completed: false
 					}
 				}
@@ -200,19 +203,18 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 				return { error };
 			}
 
-			// Still create entry in accelr8_users for extended data
+			// Create user profile using the API if sign up was successful
 			if (data.user?.id) {
-				const { error: insertError } = await supabase
-					.from('accelr8_users')
-					.insert([
-						{
-							id: data.user.id,
-							// Any other extended fields
-						}
-					]);
-
-				if (insertError) {
-					console.error('Error creating extended profile:', insertError.message);
+				try {
+					await createUser({
+						id: data.user.id,
+						email,
+						role: 'applicant',
+						onboarding_completed: false
+					});
+				} catch (apiError) {
+					console.error('Error creating user profile:', apiError);
+					// Continue even if there's an API error as the auth user was created
 				}
 			}
 
@@ -295,7 +297,8 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		updateUserProfile,
 		isAdmin,
 		isSuperAdmin,
-		isResident
+		isResident,
+		isApplicant
 	};
 
 	return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

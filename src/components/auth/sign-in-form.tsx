@@ -34,9 +34,16 @@ export function SignInForm() {
 				return;
 			}
 
-			// Successful login - just go to dashboard which will handle redirection
-			router.push('/dashboard');
-			router.refresh();
+			// Check if there's a redirectTo in the URL params
+			const params = new URLSearchParams(window.location.search);
+			const redirectTo = params.get('redirectTo') || '/dashboard';
+
+			// Handle successful login with a slight delay to ensure auth state propagates
+			setTimeout(() => {
+				router.push(redirectTo);
+				router.refresh();
+			}, 100);
+
 		} catch (err) {
 			setError('An unexpected error occurred');
 			console.error(err);
@@ -107,12 +114,12 @@ export function SignInForm() {
 			</CardContent>
 			<CardFooter className="flex justify-center">
 				<p className="text-sm text-center">
-					Don't have an account?{' '}
+					New to Accelr8?{' '}
 					<Link
-						href="/register"
+						href="/apply"
 						className="text-blue-500 hover:text-blue-600 font-medium"
 					>
-						Sign up
+						Apply to join
 					</Link>
 				</p>
 			</CardFooter>

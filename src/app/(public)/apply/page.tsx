@@ -36,6 +36,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/UserContext";
+import { getHouseIdFromSlug } from "@/lib/api/applications";
+import { SupabaseApplication } from "@/lib/types";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import {
@@ -95,6 +97,58 @@ const applicationSchema = z.object({
 
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
+// Function to submit application data to API
+function submitApplication(applicationData: Partial<SupabaseApplication>) {
+	const formData = new FormData();
+
+	// Add personal info
+	if (applicationData.responses?.personalInfo) {
+		const { firstName, lastName, email, phone, dob } = applicationData.responses.personalInfo;
+		formData.append('personalInfo.firstName', firstName);
+		formData.append('personalInfo.lastName', lastName);
+		formData.append('personalInfo.email', email);
+		formData.append('personalInfo.phone', phone);
+		formData.append('personalInfo.dob', dob);
+	}
+
+	// Add preferences
+	if (applicationData.responses?.preferences) {
+		const { location, roomType, moveInDate, duration } = applicationData.responses.preferences;
+		formData.append('preferences.location', location);
+		formData.append('preferences.roomType', roomType);
+		formData.append('preferences.moveInDate', moveInDate);
+		formData.append('preferences.duration', duration);
+	}
+
+	// Add background
+	if (applicationData.responses?.background) {
+		const { role, company, linkedin, github, website, workDescription, goals } = applicationData.responses.background;
+		formData.append('background.role', role);
+		formData.append('background.company', company);
+		if (linkedin) formData.append('background.linkedin', linkedin);
+		if (github) formData.append('background.github', github);
+		if (website) formData.append('background.website', website);
+		formData.append('background.workDescription', workDescription);
+		formData.append('background.goals', goals);
+	}
+
+	// Add additional info
+	if (applicationData.responses?.additional) {
+		const { howHeard, referredBy, knownResidents, dietaryRestrictions, additionalInfo } = applicationData.responses.additional;
+		formData.append('additional.howHeard', howHeard);
+		if (referredBy) formData.append('additional.referredBy', referredBy);
+		if (knownResidents) formData.append('additional.knownResidents', knownResidents);
+		if (dietaryRestrictions) formData.append('additional.dietaryRestrictions', dietaryRestrictions);
+		if (additionalInfo) formData.append('additional.additionalInfo', additionalInfo);
+	}
+
+	// Send the application data to the server
+	return fetch('/api/applications', {
+		method: 'POST',
+		body: formData,
+	});
+}
+
 function ApplicationPageContent() {
 	const { toast } = useToast();
 	const searchParams = useSearchParams();
@@ -150,12 +204,23 @@ function ApplicationPageContent() {
 			// Get house ID from the selected location
 			const houseId = await getHouseIdFromSlug(values.preferences.location);
 
-			// Prepare application data
-			const applicationData: ApplicationData = {
+			// Get first and last name for the application record
+			const fullName = `${values.personalInfo.firstName} ${values.personalInfo.lastName}`;
+
+			// Prepare application data that matches the SupabaseApplication type
+			const applicationData: Partial<SupabaseApplication> = {
+				name: fullName,
+				email: values.personalInfo.email,
+				phone: values.personalInfo.phone,
 				user_id: user?.id,
-				house_id: houseId,
 				preferred_move_in: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
-				preferred_duration: values.preferences.duration,
+				preferred_duration: values.preferences.duration as '1-3 months' | '3-6 months' | '6-12 months' | '12+ months',
+				preferred_houses: [houseId],
+				current_role: values.background.role,
+				company: values.background.company,
+				linkedin_url: values.background.linkedin || undefined,
+				github_url: values.background.github || undefined,
+				portfolio_url: values.background.website || undefined,
 				status: 'submitted',
 				responses: {
 					personalInfo: {
@@ -166,7 +231,10 @@ function ApplicationPageContent() {
 						dob: format(values.personalInfo.dob, 'yyyy-MM-dd'),
 					},
 					preferences: {
+						location: values.preferences.location,
 						roomType: values.preferences.roomType,
+						moveInDate: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
+						duration: values.preferences.duration,
 					},
 					background: {
 						role: values.background.role,
@@ -185,10 +253,15 @@ function ApplicationPageContent() {
 						additionalInfo: values.additional.additionalInfo,
 					},
 				},
+				referral_source: values.additional.howHeard === 'referral' ? values.additional.referredBy : values.additional.howHeard,
 			};
 
 			// Submit the application
-			const result = await submitApplication(applicationData);
+			const response = await submitApplication(applicationData);
+
+			if (!response.ok) {
+				throw new Error('Failed to submit application');
+			}
 
 			toast({
 				title: "Application Submitted Successfully",
@@ -196,8 +269,8 @@ function ApplicationPageContent() {
 				variant: "default",
 			});
 
-			// Redirect to thank you page
-			router.push('/apply/thank-you');
+			// Redirect to dashboard instead of thank-you page
+			router.push('/dashboard');
 		} catch (error) {
 			console.error('Application submission error:', error);
 			toast({
@@ -522,10 +595,10 @@ function ApplicationPageContent() {
 																				</SelectTrigger>
 																			</FormControl>
 																			<SelectContent>
-																				<SelectItem value="1-month">1 month</SelectItem>
-																				<SelectItem value="3-months">3 months</SelectItem>
-																				<SelectItem value="6-months">6 months</SelectItem>
-																				<SelectItem value="12-months">12 months or longer</SelectItem>
+																				<SelectItem value="1-3 months">1-3 months</SelectItem>
+																				<SelectItem value="3-6 months">3-6 months</SelectItem>
+																				<SelectItem value="6-12 months">6-12 months</SelectItem>
+																				<SelectItem value="12+ months">12+ months</SelectItem>
 																			</SelectContent>
 																		</Select>
 																	</FormControl>
@@ -847,38 +920,38 @@ function ApplicationPageContent() {
 															<div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-2 text-sm">
 																<div>
 																	<p className="text-muted-foreground">Name:</p>
-																	<p>John Smith</p>
+																	<p>{form.watch('personalInfo.firstName')} {form.watch('personalInfo.lastName')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Email:</p>
-																	<p>john@example.com</p>
+																	<p>{form.watch('personalInfo.email')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Phone:</p>
-																	<p>+1 (555) 123-4567</p>
+																	<p>{form.watch('personalInfo.phone')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Date of Birth:</p>
-																	<p>March 15, 1990</p>
+																	<p>{form.watch('personalInfo.dob') ? format(form.watch('personalInfo.dob'), 'MMMM d, yyyy') : 'Not provided'}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Preferred Location:</p>
-																	<p>San Francisco - Nob Hill</p>
+																	<p>{form.watch('preferences.location')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Room Preference:</p>
-																	<p>Shared Room</p>
+																	<p>{form.watch('preferences.roomType')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Move-in Date:</p>
-																	<p>December 1, 2023</p>
+																	<p>{form.watch('preferences.moveInDate') ? format(form.watch('preferences.moveInDate'), 'MMMM d, yyyy') : 'Not selected'}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Length of Stay:</p>
-																	<p>3 months</p>
+																	<p>{form.watch('preferences.duration')}</p>
 																</div>
 															</div>
-															<Button variant="outline" size="sm" className="mt-2">
+															<Button variant="outline" size="sm" className="mt-2" onClick={() => setActiveStep("personal")}>
 																Edit
 															</Button>
 														</div>
@@ -888,22 +961,31 @@ function ApplicationPageContent() {
 															<div className="space-y-2 text-sm">
 																<div>
 																	<p className="text-muted-foreground">Current Role:</p>
-																	<p>Software Engineer</p>
+																	<p>{form.watch('background.role')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Company/Project:</p>
-																	<p>TechStartup Inc.</p>
+																	<p>{form.watch('background.company')}</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">Social Profiles:</p>
-																	<p>LinkedIn, Personal Website, GitHub</p>
+																	<p>
+																		{form.watch('background.linkedin') && 'LinkedIn '}
+																		{form.watch('background.website') && 'Personal Website '}
+																		{form.watch('background.github') && 'GitHub'}
+																		{!form.watch('background.linkedin') && !form.watch('background.website') && !form.watch('background.github') && 'None provided'}
+																	</p>
 																</div>
 																<div>
 																	<p className="text-muted-foreground">About Your Work:</p>
-																	<p className="line-clamp-2">Building a SaaS platform for small businesses that helps with customer relationship management and sales automation...</p>
+																	<p className="line-clamp-2">{form.watch('background.workDescription')}</p>
+																</div>
+																<div>
+																	<p className="text-muted-foreground">Goals:</p>
+																	<p className="line-clamp-2">{form.watch('background.goals')}</p>
 																</div>
 															</div>
-															<Button variant="outline" size="sm" className="mt-2">
+															<Button variant="outline" size="sm" className="mt-2" onClick={() => setActiveStep("background")}>
 																Edit
 															</Button>
 														</div>
@@ -913,18 +995,26 @@ function ApplicationPageContent() {
 															<div className="space-y-2 text-sm">
 																<div>
 																	<p className="text-muted-foreground">How you heard about us:</p>
-																	<p>Referred by a friend</p>
+																	<p>{form.watch('additional.howHeard')}</p>
 																</div>
-																<div>
-																	<p className="text-muted-foreground">Referrer:</p>
-																	<p>Sarah Johnson</p>
-																</div>
+																{form.watch('additional.referredBy') && (
+																	<div>
+																		<p className="text-muted-foreground">Referrer:</p>
+																		<p>{form.watch('additional.referredBy')}</p>
+																	</div>
+																)}
+																{form.watch('additional.dietaryRestrictions') && (
+																	<div>
+																		<p className="text-muted-foreground">Dietary Restrictions:</p>
+																		<p>{form.watch('additional.dietaryRestrictions')}</p>
+																	</div>
+																)}
 																<div>
 																	<p className="text-muted-foreground">Agreed to Terms:</p>
-																	<p>Yes</p>
+																	<p>{form.watch('terms') ? 'Yes' : 'No'}</p>
 																</div>
 															</div>
-															<Button variant="outline" size="sm" className="mt-2">
+															<Button variant="outline" size="sm" className="mt-2" onClick={() => setActiveStep("additional")}>
 																Edit
 															</Button>
 														</div>

@@ -1,9 +1,13 @@
 import { Event as SanityEvent, House as SanityHouse, Person as SanityPerson, RoomType as SanityRoomType } from "./sanity/sanity.types";
+
+export type UserRole = 'applicant' | 'resident' | 'admin' | 'super_admin';
+
+
 // Base Supabase user data from auth.users (via metadata)
 export interface SupabaseAuthUser {
 	id: string;
 	email?: string;
-	role: 'resident' | 'admin' | 'super_admin';
+	role: UserRole;
 	sanity_person_id?: string;
 	onboarding_completed: boolean;
 }

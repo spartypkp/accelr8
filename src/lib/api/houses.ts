@@ -1,3 +1,4 @@
+"use server";
 import { SanityDocument } from 'next-sanity';
 import {
 	addHouseLocationData,

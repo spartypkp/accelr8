@@ -136,16 +136,16 @@ export async function POST(request: NextRequest) {
 		const dbApplicationData = {
 			house_id: houseId,
 			preferred_move_in: validatedData.preferences.moveInDate,
-			preferred_duration: validatedData.preferences.duration,
-			status: 'submitted',
+			preferred_duration: validatedData.preferences.duration as "1-3 months" | "3-6 months" | "6-12 months" | "12+ months",
+			status: 'submitted' as 'submitted',
 			responses: validatedData
 		};
 
 		// Submit application to database
 		const application = await createApplication(dbApplicationData);
 
-		// Redirect to thank you page
-		return NextResponse.redirect(new URL('/apply/thank-you', request.url));
+		// Redirect to dashboard instead of thank-you page
+		return NextResponse.redirect(new URL('/dashboard', request.url));
 	} catch (error) {
 		return handleApiError(error);
 	}

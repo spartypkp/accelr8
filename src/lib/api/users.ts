@@ -5,7 +5,7 @@ import {
 } from '../enhancers/users';
 import { createSanityClient } from '../sanity/client';
 import { createClient } from '../supabase/server';
-import { SupabaseAuthUser, SupabaseExtendedUser, UserProfile } from '../types';
+import { SupabaseAuthUser, SupabaseExtendedUser, UserProfile, UserRole } from '../types';
 import { ApiError } from './shared/error';
 /**
  * Input type for creating/updating a user
@@ -16,7 +16,7 @@ export type UserProfileInput = Partial<UserProfile>;
  * Query options for filtering users
  */
 export interface UserQueryOptions {
-	role?: 'resident' | 'admin' | 'super_admin' | 'all';
+	role?: UserRole | 'all';
 	houseId?: string;
 	search?: string;
 	limit?: number;
@@ -37,7 +37,7 @@ export async function getAuthenticatedUser(user: User): Promise<UserProfile | nu
 		const authUser: SupabaseAuthUser = {
 			id: user.id,
 			email: user.email,
-			role: (user.user_metadata?.role) as 'resident' | 'admin' | 'super_admin',
+			role: (user.user_metadata?.role) as UserRole,
 			sanity_person_id: user.user_metadata?.sanity_person_id,
 			onboarding_completed: user.user_metadata?.onboarding_completed || false
 		};
@@ -94,7 +94,7 @@ export async function getUser(id: string): Promise<UserProfile | null> {
 		const authUser: SupabaseAuthUser = {
 			id: authData.user.id,
 			email: authData.user.email,
-			role: (authData.user.user_metadata?.role || 'resident') as 'resident' | 'admin' | 'super_admin',
+			role: (authData.user.user_metadata?.role || 'applicant') as UserRole,
 			sanity_person_id: authData.user.user_metadata?.sanity_person_id,
 			onboarding_completed: authData.user.user_metadata?.onboarding_completed || false
 		};
@@ -218,7 +218,7 @@ export async function getUsers(options: UserQueryOptions = {}): Promise<UserProf
 			const authUser: SupabaseAuthUser = {
 				id: user.id,
 				email: user.email,
-				role: (user.user_metadata?.role || 'resident') as 'resident' | 'admin' | 'super_admin',
+				role: (user.user_metadata?.role || 'applicant') as UserRole,
 				sanity_person_id: user.user_metadata?.sanity_person_id,
 				onboarding_completed: user.user_metadata?.onboarding_completed || false
 			};
@@ -292,7 +292,7 @@ export async function createUser(data: UserProfileInput): Promise<UserProfile> {
 			password: temporaryPassword,
 			email_confirm: true,
 			user_metadata: {
-				role: data.role || 'resident',
+				role: data.role || 'applicant',
 				onboarding_completed: data.onboarding_completed || false,
 				...(sanityPersonId && { sanity_person_id: sanityPersonId })
 			}

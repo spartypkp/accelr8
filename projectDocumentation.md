@@ -1021,12 +1021,14 @@ The Accelr8 platform implements a comprehensive authentication and authorization
 
 3. **Role-Based Access Control**
    - Three user roles with increasing permissions:
+     - `applicant`: Can access the basic 'dashboard' to see profile and application status
      - `resident`: Basic access to resident features for assigned houses
      - `admin`: House management capabilities plus resident features
      - `super_admin`: Full access to all houses and features
 
 4. **House-Specific Permissions**
    - Users only have access to houses they're associated with
+   - Applicants can only access their application
    - Residents can only access their assigned houses (via `residencies` table)
    - Admins can only manage houses they're assigned to (via `house_admins` table)
    - Super admins have access to all houses
@@ -1041,23 +1043,12 @@ The Accelr8 platform implements a comprehensive authentication and authorization
 2. **Dashboard Entry Point**
    - `/dashboard` serves as entry to house selection
    - Displays houses the user has access to based on their role
-   - Admins see houses they manage, residents see houses they live in
+   * Super Admin: All houses - both admin and resident dashboards
+   * Admin: Assigned house - admin and resident dashboard
+   * Resident: Assigned house - resident dashboard
+   * Applicant: Only see their application - no house specific dashboard.
+   - All users can see basic settings, user profile.
 
-3. **House Access Verification**
-   - When accessing a specific house (`/dashboard/[houseId]/*`):
-     - Middleware verifies the user has access to that house
-     - Checks appropriate table based on user role (`residencies` or `house_admins`)
-     - Redirects to house selection if access check fails
-
-4. **Section-Based Permissions**
-   - `/dashboard/[houseId]/resident/*` - Resident functionality (accessible to all users with house access)
-   - `/dashboard/[houseId]/admin/*` - Admin functionality (only for admins and super admins)
-   - Routing structure enforces clear separation of concerns
-
-5. **UI Components & Navigation**
-   - Navigation adapts based on user role and current section
-   - Admins can switch between resident and admin views
-   - Layout components handle conditional rendering based on permissions
 
 ### Security Considerations
 

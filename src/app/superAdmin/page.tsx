@@ -3,17 +3,49 @@
 import { AdminLayout } from "@/components/layout/admin-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { getHouses } from "@/lib/api/houses";
+import { House } from "@/lib/types";
 import { ArrowRight, PieChart, Settings } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function AdminPage() {
+	const [houses, setHouses] = useState<House[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
 
-	// Mock data for houses - would come from database in production
-	const houses = [
-		{ id: "sf-nob-hill", name: "San Francisco - Nob Hill", residents: 18, occupancy: 90, alert: false },
-		{ id: "nyc-brooklyn", name: "New York - Brooklyn", residents: 15, occupancy: 75, alert: true },
-		{ id: "austin-downtown", name: "Austin - Downtown", residents: 12, occupancy: 60, alert: false },
-	];
+	// Fetch houses from API
+	useEffect(() => {
+		async function fetchHouses() {
+			try {
+				const housesData = await getHouses();
+				setHouses(housesData);
+			} catch (error) {
+				console.error("Error fetching houses:", error);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		fetchHouses();
+	}, []);
+
+	// Calculate house metrics
+	const totalResidents = houses.reduce((sum, house) => sum + (house.current_occupancy || 0), 0);
+	const averageOccupancy = houses.length > 0
+		? Math.round(houses.reduce((sum, house) => {
+			const capacity = house.sanityHouse?.capacity || 0;
+			const occupancyRate = capacity > 0
+				? (house.current_occupancy / capacity) * 100
+				: 0;
+			return sum + occupancyRate;
+		}, 0) / houses.length)
+		: 0;
+
+	// Houses with alerts (could be based on various criteria)
+	const housesWithAlerts = houses.filter(house =>
+		house.status === 'closed' ||
+		(house.sanityHouse?.capacity && house.current_occupancy >= house.sanityHouse.capacity)
+	);
 
 	return (
 		<AdminLayout>
@@ -31,7 +63,7 @@ export default function AdminPage() {
 						<CardContent>
 							<div className="text-2xl font-bold">{houses.length}</div>
 							<p className="text-xs text-muted-foreground">
-								Across {houses.length} cities
+								{isLoading ? "Loading..." : `Across ${houses.length} locations`}
 							</p>
 						</CardContent>
 					</Card>
@@ -41,10 +73,10 @@ export default function AdminPage() {
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{houses.reduce((sum, house) => sum + house.residents, 0)}
+								{isLoading ? "..." : totalResidents}
 							</div>
 							<p className="text-xs text-muted-foreground">
-								+5 from last month
+								Active community members
 							</p>
 						</CardContent>
 					</Card>
@@ -54,12 +86,10 @@ export default function AdminPage() {
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{Math.round(
-									houses.reduce((sum, house) => sum + house.occupancy, 0) / houses.length
-								)}%
+								{isLoading ? "..." : `${averageOccupancy}%`}
 							</div>
 							<p className="text-xs text-muted-foreground">
-								+2% from last month
+								Across all properties
 							</p>
 						</CardContent>
 					</Card>
@@ -71,7 +101,7 @@ export default function AdminPage() {
 						</CardHeader>
 						<CardContent>
 							<div className="text-2xl font-bold">
-								{houses.filter(house => house.alert).length}
+								{isLoading ? "..." : housesWithAlerts.length}
 							</div>
 							<p className="text-xs text-muted-foreground">
 								Requires attention
@@ -88,34 +118,45 @@ export default function AdminPage() {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<div className="space-y-4">
-							{houses.map((house) => (
-								<div
-									key={house.id}
-									className="flex items-center justify-between rounded-lg border p-4"
-								>
-									<div className="space-y-1">
-										<h3 className="font-medium">{house.name}</h3>
-										<p className="text-sm text-muted-foreground">
-											{house.residents} residents ({house.occupancy}% occupied)
-										</p>
+						{isLoading ? (
+							<div className="py-6 text-center text-muted-foreground">Loading houses...</div>
+						) : houses.length === 0 ? (
+							<div className="py-6 text-center text-muted-foreground">
+								No houses found. Add your first house to get started.
+							</div>
+						) : (
+							<div className="space-y-4">
+								{houses.map((house) => (
+									<div
+										key={house.id}
+										className="flex items-center justify-between rounded-lg border p-4"
+									>
+										<div className="space-y-1">
+											<h3 className="font-medium">{house.sanityHouse?.name || "Unnamed House"}</h3>
+											<p className="text-sm text-muted-foreground">
+												{house.current_occupancy} residents
+												{house.sanityHouse?.capacity ?
+													` (${Math.round((house.current_occupancy / house.sanityHouse.capacity) * 100)}% occupied)` :
+													''}
+											</p>
+										</div>
+										<div className="flex items-center gap-2">
+											{house.status === 'closed' && (
+												<span className="flex h-2 w-2 rounded-full bg-red-500" title="House is closed"></span>
+											)}
+											<Button asChild variant="outline" size="sm">
+												<Link href={`/dashboard/${house.sanityHouse?.slug?.current}/admin`}>
+													Manage <ArrowRight className="ml-2 h-4 w-4" />
+												</Link>
+											</Button>
+										</div>
 									</div>
-									<div className="flex items-center gap-2">
-										{house.alert && (
-											<span className="flex h-2 w-2 rounded-full bg-red-500"></span>
-										)}
-										<Button asChild variant="outline" size="sm">
-											<Link href={`/admin/${house.id}`}>
-												Manage <ArrowRight className="ml-2 h-4 w-4" />
-											</Link>
-										</Button>
-									</div>
-								</div>
-							))}
-						</div>
+								))}
+							</div>
+						)}
 						<div className="mt-6">
 							<Button asChild>
-								<Link href="/admin/expansion">
+								<Link href="/superAdmin/expansion">
 									Add New House
 								</Link>
 							</Button>
