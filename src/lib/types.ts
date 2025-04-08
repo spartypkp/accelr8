@@ -118,14 +118,28 @@ export interface Event extends SupabaseHouseEvent {
 
 }
 
+/**
+ * Application status enum representing all possible states of an application
+ */
+export enum ApplicationStatus {
+	Draft = 'draft',
+	Submitted = 'submitted',
+	Reviewing = 'reviewing',
+	InterviewScheduled = 'interview_scheduled',
+	InterviewCompleted = 'interview_completed',
+	Approved = 'approved',
+	Rejected = 'rejected',
+	Waitlisted = 'waitlisted',
+	Accepted = 'accepted',
+	Cancelled = 'cancelled'
+}
+
 export interface SupabaseApplication {
 	id: string;
 	email: string;
 	name: string;
 	phone?: string;
-	status: 'draft' | 'submitted' | 'reviewing' | 'interview_scheduled' |
-	'interview_completed' | 'approved' | 'rejected' | 'waitlisted' |
-	'accepted' | 'cancelled';
+	status: ApplicationStatus;
 	preferred_move_in?: string;
 	preferred_duration?: '1-3 months' | '3-6 months' | '6-12 months' | '12+ months';
 	preferred_houses?: string[]; // Array of Sanity house IDs

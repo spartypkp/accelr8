@@ -7,7 +7,7 @@ import { useUser } from "@/hooks/UserContext";
 import { getApplications } from "@/lib/api/applications";
 import { getHouses } from "@/lib/api/houses";
 import { urlFor } from "@/lib/sanity/client";
-import { House, SupabaseApplication } from "@/lib/types";
+import { ApplicationStatus, House, SupabaseApplication } from "@/lib/types";
 import { HomeIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -245,7 +245,7 @@ export default function DashboardPage() {
 															<p className="font-medium">Status</p>
 															<p className="capitalize">{app.status}</p>
 														</div>
-														{app.status === 'interview_scheduled' && (
+														{app.status === ApplicationStatus.InterviewScheduled && (
 															<div>
 																<p className="font-medium">Interview</p>
 																<p>Check your email for details</p>

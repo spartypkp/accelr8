@@ -36,8 +36,8 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/UserContext";
-import { getHouseIdFromSlug } from "@/lib/api/applications";
-import { SupabaseApplication } from "@/lib/types";
+import { createApplication } from "@/lib/api/applications";
+import { ApplicationStatus, SupabaseApplication } from "@/lib/types";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import {
@@ -97,56 +97,58 @@ const applicationSchema = z.object({
 
 type ApplicationFormValues = z.infer<typeof applicationSchema>;
 
-// Function to submit application data to API
-function submitApplication(applicationData: Partial<SupabaseApplication>) {
-	const formData = new FormData();
+// Transform form values to API structure
+function transformFormValuesToApiData(values: ApplicationFormValues): Partial<SupabaseApplication> {
+	// Define allowed duration values
+	type AllowedDurations = '1-3 months' | '3-6 months' | '6-12 months' | '12+ months';
 
-	// Add personal info
-	if (applicationData.responses?.personalInfo) {
-		const { firstName, lastName, email, phone, dob } = applicationData.responses.personalInfo;
-		formData.append('personalInfo.firstName', firstName);
-		formData.append('personalInfo.lastName', lastName);
-		formData.append('personalInfo.email', email);
-		formData.append('personalInfo.phone', phone);
-		formData.append('personalInfo.dob', dob);
-	}
+	// Validate if the duration is one of the allowed types
+	const duration = values.preferences.duration;
+	const validDuration = ['1-3 months', '3-6 months', '6-12 months', '12+ months'].includes(duration)
+		? duration as AllowedDurations
+		: undefined;
 
-	// Add preferences
-	if (applicationData.responses?.preferences) {
-		const { location, roomType, moveInDate, duration } = applicationData.responses.preferences;
-		formData.append('preferences.location', location);
-		formData.append('preferences.roomType', roomType);
-		formData.append('preferences.moveInDate', moveInDate);
-		formData.append('preferences.duration', duration);
-	}
+	return {
+		// Map the basic fields
+		name: `${values.personalInfo.firstName} ${values.personalInfo.lastName}`,
+		email: values.personalInfo.email,
+		phone: values.personalInfo.phone,
+		status: ApplicationStatus.Submitted,
 
-	// Add background
-	if (applicationData.responses?.background) {
-		const { role, company, linkedin, github, website, workDescription, goals } = applicationData.responses.background;
-		formData.append('background.role', role);
-		formData.append('background.company', company);
-		if (linkedin) formData.append('background.linkedin', linkedin);
-		if (github) formData.append('background.github', github);
-		if (website) formData.append('background.website', website);
-		formData.append('background.workDescription', workDescription);
-		formData.append('background.goals', goals);
-	}
+		// Handle preferences
+		preferred_move_in: values.preferences.moveInDate.toISOString(),
+		preferred_duration: validDuration,
+		preferred_houses: [values.preferences.location],
 
-	// Add additional info
-	if (applicationData.responses?.additional) {
-		const { howHeard, referredBy, knownResidents, dietaryRestrictions, additionalInfo } = applicationData.responses.additional;
-		formData.append('additional.howHeard', howHeard);
-		if (referredBy) formData.append('additional.referredBy', referredBy);
-		if (knownResidents) formData.append('additional.knownResidents', knownResidents);
-		if (dietaryRestrictions) formData.append('additional.dietaryRestrictions', dietaryRestrictions);
-		if (additionalInfo) formData.append('additional.additionalInfo', additionalInfo);
-	}
+		// Map role and company
+		current_role: values.background.role,
+		company: values.background.company,
 
-	// Send the application data to the server
-	return fetch('/api/applications', {
-		method: 'POST',
-		body: formData,
-	});
+		// Map URLs
+		linkedin_url: values.background.linkedin || undefined,
+		github_url: values.background.github || undefined,
+		portfolio_url: values.background.website || undefined,
+
+		// Set bio from goals
+		bio: values.background.goals,
+
+		// Referral source
+		referral_source: values.additional.howHeard,
+
+		// Store all form data in responses for future reference
+		responses: {
+			personalInfo: {
+				...values.personalInfo,
+				dob: values.personalInfo.dob.toISOString()
+			},
+			preferences: {
+				...values.preferences,
+				moveInDate: values.preferences.moveInDate.toISOString()
+			},
+			background: values.background,
+			additional: values.additional
+		}
+	};
 }
 
 function ApplicationPageContent() {
@@ -198,83 +200,27 @@ function ApplicationPageContent() {
 
 	// Function to handle form submission
 	async function onSubmit(values: ApplicationFormValues) {
-		setIsSubmitting(true);
-
 		try {
-			// Get house ID from the selected location
-			const houseId = await getHouseIdFromSlug(values.preferences.location);
+			setIsSubmitting(true);
 
-			// Get first and last name for the application record
-			const fullName = `${values.personalInfo.firstName} ${values.personalInfo.lastName}`;
+			// Transform form values to API data structure
+			const applicationData = transformFormValuesToApiData(values);
 
-			// Prepare application data that matches the SupabaseApplication type
-			const applicationData: Partial<SupabaseApplication> = {
-				name: fullName,
-				email: values.personalInfo.email,
-				phone: values.personalInfo.phone,
-				user_id: user?.id,
-				preferred_move_in: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
-				preferred_duration: values.preferences.duration as '1-3 months' | '3-6 months' | '6-12 months' | '12+ months',
-				preferred_houses: [houseId],
-				current_role: values.background.role,
-				company: values.background.company,
-				linkedin_url: values.background.linkedin || undefined,
-				github_url: values.background.github || undefined,
-				portfolio_url: values.background.website || undefined,
-				status: 'submitted',
-				responses: {
-					personalInfo: {
-						firstName: values.personalInfo.firstName,
-						lastName: values.personalInfo.lastName,
-						email: values.personalInfo.email,
-						phone: values.personalInfo.phone,
-						dob: format(values.personalInfo.dob, 'yyyy-MM-dd'),
-					},
-					preferences: {
-						location: values.preferences.location,
-						roomType: values.preferences.roomType,
-						moveInDate: format(values.preferences.moveInDate, 'yyyy-MM-dd'),
-						duration: values.preferences.duration,
-					},
-					background: {
-						role: values.background.role,
-						company: values.background.company,
-						linkedin: values.background.linkedin,
-						github: values.background.github,
-						website: values.background.website,
-						workDescription: values.background.workDescription,
-						goals: values.background.goals,
-					},
-					additional: {
-						howHeard: values.additional.howHeard,
-						referredBy: values.additional.referredBy,
-						knownResidents: values.additional.knownResidents,
-						dietaryRestrictions: values.additional.dietaryRestrictions,
-						additionalInfo: values.additional.additionalInfo,
-					},
-				},
-				referral_source: values.additional.howHeard === 'referral' ? values.additional.referredBy : values.additional.howHeard,
-			};
-
-			// Submit the application
-			const response = await submitApplication(applicationData);
-
-			if (!response.ok) {
-				throw new Error('Failed to submit application');
-			}
+			// Call API to create application
+			const application = await createApplication(applicationData);
 
 			toast({
-				title: "Application Submitted Successfully",
-				description: "We will review your application and get back to you soon.",
+				title: "Application Submitted",
+				description: "Your application has been submitted successfully!",
 				variant: "default",
 			});
 
-			// Redirect to dashboard instead of thank-you page
-			router.push('/dashboard');
+			// Redirect to success page
+			router.push(`/apply/success?id=${application.id}`);
 		} catch (error) {
-			console.error('Application submission error:', error);
+			console.error(error);
 			toast({
-				title: "Application Submission Failed",
+				title: "Error",
 				description: "There was an error submitting your application. Please try again.",
 				variant: "destructive",
 			});
@@ -1022,9 +968,22 @@ function ApplicationPageContent() {
 												</div>
 
 												<div className="flex justify-end">
-													<Button type="submit" className="flex items-center">
-														Submit Application
-														<ArrowRight className="ml-2 h-4 w-4" />
+													<Button
+														type="submit"
+														className="flex items-center"
+														disabled={isSubmitting}
+													>
+														{isSubmitting ? (
+															<>
+																<span className="mr-2">Submitting...</span>
+																<div className="h-4 w-4 border-t-2 border-primary-foreground animate-spin rounded-full" />
+															</>
+														) : (
+															<>
+																Submit Application
+																<ArrowRight className="ml-2 h-4 w-4" />
+															</>
+														)}
 													</Button>
 												</div>
 											</TabsContent>

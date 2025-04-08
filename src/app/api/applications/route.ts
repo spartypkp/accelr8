@@ -7,13 +7,14 @@ import {
 import { getCacheHeaders } from '@/lib/api/shared/cache';
 import { handleApiError } from '@/lib/api/shared/error';
 import { withValidation } from '@/lib/api/shared/validation';
+import { ApplicationStatus } from '@/lib/types';
 import { NextRequest, NextResponse } from "next/server";
 import { z } from 'zod';
 
 // Schema for applications query parameters
 const applicationsQuerySchema = z.object({
 	houseId: z.string().optional(),
-	status: z.enum(['submitted', 'reviewing', 'approved', 'rejected', 'all']).optional(),
+	status: z.enum([ApplicationStatus.Submitted, ApplicationStatus.Reviewing, ApplicationStatus.Approved, ApplicationStatus.Rejected, 'all']).optional(),
 	search: z.string().optional(),
 	limit: z.coerce.number().optional(),
 	offset: z.coerce.number().optional(),
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
 			house_id: houseId,
 			preferred_move_in: validatedData.preferences.moveInDate,
 			preferred_duration: validatedData.preferences.duration as "1-3 months" | "3-6 months" | "6-12 months" | "12+ months",
-			status: 'submitted' as 'submitted',
+			status: ApplicationStatus.Submitted,
 			responses: validatedData
 		};
 

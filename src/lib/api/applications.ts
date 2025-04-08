@@ -6,7 +6,7 @@ import {
 } from '../enhancers/applications';
 import { createSanityClient } from '../sanity/client';
 import { createClient } from '../supabase/server';
-import { SupabaseApplication } from '../types';
+import { ApplicationStatus, SupabaseApplication } from '../types';
 import { ApiError } from './shared/error';
 
 /**
@@ -14,7 +14,7 @@ import { ApiError } from './shared/error';
  */
 export interface ApplicationQueryOptions {
 	houseId?: string;
-	status?: 'submitted' | 'reviewing' | 'approved' | 'rejected' | 'all';
+	status?: ApplicationStatus | 'all';
 	search?: string;
 	limit?: number;
 	offset?: number;
@@ -273,7 +273,7 @@ export async function createApplication(data: Partial<SupabaseApplication>): Pro
  */
 export async function updateApplicationStatus(
 	id: string,
-	status: 'submitted' | 'reviewing' | 'interview_scheduled' | 'interview_completed' | 'approved' | 'rejected' | 'waitlisted' | 'accepted' | 'cancelled'
+	status: Exclude<ApplicationStatus, ApplicationStatus.Draft>
 ): Promise<EnhancedApplication> {
 	try {
 		const supabase = await createClient();
@@ -283,8 +283,8 @@ export async function updateApplicationStatus(
 			.from('applications')
 			.update({
 				status,
-				...(status === 'reviewing' ? { reviewed_at: new Date().toISOString() } : {}),
-				...(status === 'submitted' && !status ? { submitted_at: new Date().toISOString() } : {})
+				...(status === ApplicationStatus.Reviewing ? { reviewed_at: new Date().toISOString() } : {}),
+				...(status === ApplicationStatus.Submitted && !status ? { submitted_at: new Date().toISOString() } : {})
 			})
 			.eq('id', id)
 			.select('*')
