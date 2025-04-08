@@ -4,8 +4,8 @@ import { PublicLayout } from "@/components/layout/public-layout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { urlFor } from "@/lib/sanity";
 import { House } from "@/lib/sanity.types";
+import { urlFor } from "@/lib/sanity/client";
 import {
 	AlertCircle,
 	ArrowRight,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { signOut } from "@/lib/auth-utils";
+import { useUser } from "@/hooks/UserContext";
 import { cn } from "@/lib/utils";
 import {
 	Calendar,
@@ -27,6 +27,7 @@ export default function DashboardSidebar({ user }: WithUserProps) {
 
 	// Define base path for links
 	const basePath = houseId ? `/dashboard/${houseId}/${section}` : '/dashboard';
+	const { signOut } = useUser();
 
 	// Define sidebar links for resident section
 	const residentLinks = [

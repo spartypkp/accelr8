@@ -1,7 +1,7 @@
 'use client';
 
+import { getAuthenticatedUser, updateUser } from '@/lib/api/users';
 import { createSanityClient } from '@/lib/sanity/client';
-import { Person as SanityPerson } from '@/lib/sanity/sanity.types';
 import { createClient } from '@/lib/supabase/client';
 import { UserProfile } from '@/lib/types';
 import { User } from '@supabase/supabase-js';
@@ -67,9 +67,9 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 	const sanityClient = createSanityClient();
 
 	// Computed properties based on user profile
-	const isAdmin = userProfile?.isAdmin || false;
-	const isSuperAdmin = userProfile?.isSuperAdmin || false;
-	const isResident = userProfile?.isResident || false;
+	const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'super_admin' || false;
+	const isSuperAdmin = userProfile?.role === 'super_admin' || false;
+	const isResident = userProfile?.role === 'resident' || false;
 
 	// Function to update last_active timestamp
 	const updateLastActive = async (userId: string) => {
@@ -83,94 +83,13 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 		}
 	};
 
-	// Helper to convert portable text to plain text for bio
-	const portableTextToString = (blocks: any[]): string => {
-		if (!blocks || !Array.isArray(blocks)) return '';
-		return blocks
-			.map(block => {
-				if (!block.children) return '';
-				return block.children.map((child: any) => child.text || '').join('');
-			})
-			.join('\n\n');
-	};
-
 	// Unified function to fetch the complete user profile
 	const fetchUserProfile = async (): Promise<UserProfile | null> => {
 		if (!user) return null;
 
 		setIsLoadingProfile(true);
 		try {
-			// 1. Get the basic auth user and metadata
-			const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
-
-			if (authError || !authUser) {
-				console.error('Error fetching auth user:', authError?.message);
-				return null;
-			}
-
-			// 2. Get extended data from accelr8_users table
-			const { data: extendedData, error: extendedError } = await supabase
-				.from('accelr8_users')
-				.select('*')
-				.eq('id', authUser.id)
-				.single();
-
-			if (extendedError) {
-				console.error('Error fetching extended data:', extendedError.message);
-			}
-
-			// 3. Get Sanity profile if there's a sanity_person_id
-			let sanityProfile: SanityPerson | null = null;
-			const sanityPersonId = authUser.user_metadata?.sanity_person_id;
-
-			if (sanityPersonId) {
-				try {
-					sanityProfile = await sanityClient.fetch<SanityPerson>(
-						`*[_type == "person" && _id == $id][0]`,
-						{ id: sanityPersonId }
-					);
-				} catch (sanityError) {
-					console.error('Error fetching Sanity profile:', sanityError);
-				}
-			}
-
-			// 4. Build the combined profile
-			const profile: UserProfile = {
-				// Base auth data
-				id: authUser.id,
-				email: authUser.email || undefined,
-				role: (authUser.user_metadata?.role as 'resident' | 'admin' | 'super_admin') || 'resident',
-				onboarding_completed: !!authUser.user_metadata?.onboarding_completed,
-
-				// Extended data if available
-				extendedData: extendedData ? {
-					emergency_contact_name: extendedData.emergency_contact_name,
-					emergency_contact_phone: extendedData.emergency_contact_phone,
-					phone_number: extendedData.phone_number,
-					last_active: extendedData.last_active
-				} : undefined,
-
-				// Sanity profile if available - properly mapping between types
-				sanityProfile: sanityProfile ? {
-					id: sanityProfile._id,
-					name: sanityProfile.name || '',
-					slug: sanityProfile.slug?.current,
-					profileImage: sanityProfile.profileImage,
-					bio: sanityProfile.bio || '',
-					fullBio: sanityProfile.fullBio ? portableTextToString(sanityProfile.fullBio) : undefined,
-					isTeamMember: sanityProfile.isTeamMember,
-					isResident: sanityProfile.isResident,
-					houseId: sanityProfile.house?._ref,
-					socialLinks: sanityProfile.socialLinks,
-					skills: sanityProfile.skills,
-					company: sanityProfile.company
-				} : undefined,
-
-				// Computed properties
-				isAdmin: authUser.user_metadata?.role === 'admin' || authUser.user_metadata?.role === 'super_admin',
-				isSuperAdmin: authUser.user_metadata?.role === 'super_admin',
-				isResident: authUser.user_metadata?.role === 'resident' || !authUser.user_metadata?.role
-			};
+			const profile = await getAuthenticatedUser(user);
 
 			// Update the state
 			setUserProfile(profile);
@@ -315,48 +234,8 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 				return { error };
 			}
 
-			// Separate metadata fields from extended data
-			const metadataUpdates: Record<string, unknown> = {};
-			const extendedDataUpdates: Record<string, unknown> = {};
-
-			// Determine which fields go where
-			if (data.role !== undefined) metadataUpdates.role = data.role;
-			if (data.onboarding_completed !== undefined) metadataUpdates.onboarding_completed = data.onboarding_completed;
-
-			// Handle extended data if present
-			if (data.extendedData) {
-				if (data.extendedData.emergency_contact_name !== undefined)
-					extendedDataUpdates.emergency_contact_name = data.extendedData.emergency_contact_name;
-				if (data.extendedData.emergency_contact_phone !== undefined)
-					extendedDataUpdates.emergency_contact_phone = data.extendedData.emergency_contact_phone;
-				if (data.extendedData.phone_number !== undefined)
-					extendedDataUpdates.phone_number = data.extendedData.phone_number;
-			}
-
-			// Update auth metadata if needed
-			if (Object.keys(metadataUpdates).length > 0) {
-				const { error: metadataError } = await supabase.auth.updateUser({
-					data: metadataUpdates
-				});
-
-				if (metadataError) {
-					setError(metadataError.message);
-					return { error: metadataError };
-				}
-			}
-
-			// Update extended data if needed
-			if (Object.keys(extendedDataUpdates).length > 0) {
-				const { error: extendedError } = await supabase
-					.from('accelr8_users')
-					.update(extendedDataUpdates)
-					.eq('id', user.id);
-
-				if (extendedError) {
-					setError(extendedError.message);
-					return { error: extendedError };
-				}
-			}
+			// Call the server action directly
+			await updateUser(user.id, data);
 
 			// Refresh the profile to get the latest data
 			await fetchUserProfile();

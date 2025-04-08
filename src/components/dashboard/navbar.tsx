@@ -9,13 +9,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { signOut } from "@/lib/auth-utils";
+
+import { useUser } from "@/hooks/UserContext";
 import { Bell, LogOut, Settings, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MobileSidebar } from "./mobile-sidebar";
 import { WithUserProps } from "./types";
-
 export default function DashboardNavbar({ user }: WithUserProps) {
 	const pathname = usePathname();
 	const pathParts = pathname.split("/");
@@ -30,6 +30,7 @@ export default function DashboardNavbar({ user }: WithUserProps) {
 	const firstInitial = user.name ? user.name.charAt(0) : user.email.charAt(0).toUpperCase();
 	const lastInitial = user.name ? (user.name.includes(" ") ? user.name.split(" ").pop()?.charAt(0) || "" : "") : "";
 	const initials = firstInitial + lastInitial;
+	const { signOut } = useUser();
 
 	const handleSignOut = async () => {
 		await signOut();

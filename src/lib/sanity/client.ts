@@ -1,3 +1,4 @@
+import imageUrlBuilder from '@sanity/image-url';
 import { createClient, SanityClient } from 'next-sanity';
 import { SanityImageAsset, SanityImageCrop, SanityImageHotspot } from './sanity.types';
 
@@ -43,4 +44,12 @@ export const createSanityClient = (): SanityClient => {
 	});
 
 	return client;
+};
+
+// Create a client instance for use with imageUrlBuilder
+const client = createSanityClient();
+
+// Helper function to generate image URLs
+export const urlFor = (source: SanityImage) => {
+	return imageUrlBuilder(client).image(source);
 }; 

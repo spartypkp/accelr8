@@ -1,6 +1,6 @@
 import { PublicLayout } from "@/components/layout/public-layout";
 import { Button } from "@/components/ui/button";
-import { sanityClient, urlFor } from "@/lib/sanity";
+import { createSanityClient, urlFor } from "@/lib/sanity/client";
 import {
 	ArrowRight,
 	Award,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 	title: "About Accelr8 | The Story of Our Community",
 	description: "The journey, vision, and community building the future of technology in San Francisco.",
 };
-
+const sanityClient = createSanityClient();
 // Fetch team members from Sanity
 async function getTeamMembers() {
 	const teamMembers = await sanityClient.fetch(`

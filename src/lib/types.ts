@@ -1,6 +1,4 @@
-import { Event as SanityEvent, House as SanityHouse, RoomType as SanityRoomType } from "./sanity.types";
-import { SanityImage } from "./sanity/client";
-
+import { Event as SanityEvent, House as SanityHouse, Person as SanityPerson, RoomType as SanityRoomType } from "./sanity/sanity.types";
 // Base Supabase user data from auth.users (via metadata)
 export interface SupabaseAuthUser {
 	id: string;
@@ -11,8 +9,7 @@ export interface SupabaseAuthUser {
 }
 
 // Extended user data from accelr8_users table
-export interface SupabaseExtendedUser {
-	id: string; // References auth.users(id)
+export interface SupabaseExtendedUser extends SupabaseAuthUser {
 	emergency_contact_name?: string;
 	emergency_contact_phone?: string;
 	phone_number?: string;
@@ -21,46 +18,9 @@ export interface SupabaseExtendedUser {
 	updated_at: string;
 }
 
-export interface UserProfile {
-	// Base auth data (from SupabaseAuthUser)
-	id: string;
-	email?: string;
-	role: 'resident' | 'admin' | 'super_admin';
-	onboarding_completed: boolean;
-
-	// Extended data (from SupabaseExtendedUser)
-	extendedData?: {
-		emergency_contact_name?: string;
-		emergency_contact_phone?: string;
-		phone_number?: string;
-		last_active?: string;
-	};
-
+export interface UserProfile extends SupabaseExtendedUser {
 	// Public profile data (from SanityPerson)
-	sanityProfile?: {
-		id: string; // Renamed from _id
-		name: string;
-		slug?: string; // Simplified from slug.current
-		profileImage?: SanityImage;
-		bio?: string;
-		fullBio?: string;
-		isTeamMember?: boolean;
-		isResident?: boolean;
-		houseId?: string; // Simplified from house._ref
-		socialLinks?: {
-			twitter?: string;
-			linkedin?: string;
-			github?: string;
-			website?: string;
-		};
-		skills?: string[];
-		company?: string;
-	};
-
-	// Computed properties
-	isAdmin: boolean; // derived from role
-	isSuperAdmin: boolean; // derived from role 
-	isResident: boolean; // derived from role
+	sanityPerson?: SanityPerson;
 }
 
 // House operations from Supabase
@@ -82,25 +42,10 @@ export interface SupabaseHouseOperations {
 }
 
 
-export interface House extends Omit<SanityHouse, '_id' | 'slug'> {
-	// Normalized properties from Sanity
-	id: string; // renamed from _id
-	slug: string; // simplified from slug.current
+export interface House extends SupabaseHouseOperations {
+	sanityHouse?: SanityHouse;
 
-	// Add operational data from Supabase
-	operations?: Omit<SupabaseHouseOperations, 'sanity_house_id' | 'created_at' | 'updated_at'> & {
-		// Normalized properties from Supabase
-		status: 'operational' | 'maintenance' | 'planned_closure' | 'renovation';
-		currentOccupancy: number;
-		wifiNetwork?: string; // camelCase version of wifi_network 
-		wifiPassword?: string;
-		accessCode?: string;
-		lastInspectionDate?: string;
-	};
 
-	// Computed properties
-	isActive: boolean; // derived from active flag and operations status
-	occupancyRate?: number; // calculated as currentOccupancy / capacity
 }
 
 export interface SupabaseRoom {
@@ -125,42 +70,9 @@ export interface SupabaseRoom {
 
 
 // Combined Room type extending the operational data with content
-export interface Room extends Omit<SupabaseRoom,
-	'sanity_house_id' | 'sanity_room_type_id' | 'room_number' |
-	'current_resident_id' | 'current_price' | 'lease_start_date' |
-	'lease_end_date' | 'last_maintenance_date' | 'last_cleaned_date' |
-	'inventory_items' | 'special_notes' | 'created_at' | 'updated_at'> {
+export interface Room extends SupabaseRoom {
 
-	// Normalized properties from Supabase
-	roomNumber: string; // renamed from room_number
-	currentResidentId?: string;
-	currentPrice?: number;
-	leaseStartDate?: string;
-	leaseEndDate?: string;
-	lastMaintenanceDate?: string;
-	lastCleanedDate?: string;
-	inventoryItems?: Record<string, any>;
-	specialNotes?: string;
-
-	// Room type data from Sanity
-	type: Omit<SanityRoomType, '_id' | 'house'> & {
-		id: string; // renamed from _id
-	};
-
-	// House reference data from Sanity
-	house: {
-		id: string; // renamed from _id
-		name: string;
-		location?: {
-			city?: string;
-			state?: string;
-		};
-	};
-
-	// Computed properties
-	isAvailable: boolean; // derived from status
-	pricePerMonth: number; // currentPrice or type.basePrice
-	daysUntilAvailable?: number; // calculated from leaseEndDate if occupied
+	sanityRoomType?: SanityRoomType;
 }
 
 // House event from Supabase
@@ -195,51 +107,11 @@ export interface SupabaseEventParticipation {
 	created_at: string;
 	updated_at: string;
 }
-export interface Event {
-	// Common properties
-	id: string; // Sanity _id or Supabase id
-	title: string;
-	description?: string;
-	startDateTime: string; // ISO datetime string from either source
-	endDateTime: string; // ISO datetime string from either source
-	location?: string;
-	houseId?: string; // Sanity house _ref or Supabase sanity_house_id
-	houseName?: string; // Derived from house reference
+export interface Event extends SupabaseHouseEvent {
 
 	// Properties available when sourced from Sanity
-	sanityData?: Omit<SanityEvent, '_id' | 'house' | 'startDateTime' | 'endDateTime' | 'title' | 'shortDescription'> & {
-		slug?: string; // simplified from slug.current
-		isGlobal: boolean;
-		isPublic: boolean;
-	};
+	sanityEvent?: SanityEvent;
 
-	// Properties available when sourced from Supabase
-	operationalData?: Omit<SupabaseHouseEvent,
-		'id' | 'sanity_event_id' | 'sanity_house_id' | 'title' |
-		'description' | 'start_time' | 'end_time' | 'location' |
-		'created_at' | 'updated_at'> & {
-			isMandatory: boolean; // renamed from is_mandatory
-			createdBy?: {
-				id: string;
-				name?: string;
-			};
-			currentParticipants: number;
-
-			// User-specific participation data (if available)
-			userParticipation?: Omit<SupabaseEventParticipation,
-				'id' | 'event_id' | 'user_id' | 'created_at' | 'updated_at' | 'rsvp_time'> & {
-					rsvpTime: string;
-				};
-		};
-
-	// Source indicator
-	source: 'sanity' | 'supabase' | 'both';
-
-	// Computed properties
-	isPast: boolean; // Based on current time vs endDateTime
-	isOngoing: boolean; // Based on current time between start/end
-	isUpcoming: boolean; // Based on current time vs startDateTime
-	daysUntil?: number; // Days until event starts
 }
 
 export interface SupabaseApplication {
@@ -291,66 +163,4 @@ export interface SupabaseApplicationInterview {
 }
 
 
-// Application type with normalized property names
-export interface Application extends Omit<SupabaseApplication,
-	'preferred_move_in' | 'preferred_duration' | 'preferred_houses' |
-	'linkedin_url' | 'github_url' | 'portfolio_url' | 'resume_url' |
-	'submitted_at' | 'referral_source' | 'admin_notes' | 'rejection_reason' |
-	'reviewed_by' | 'reviewed_at' | 'assigned_house_id' | 'assigned_room_id' |
-	'sanity_person_id' | 'user_id' | 'created_at' | 'updated_at'> {
-
-	// Normalized properties
-	preferredMoveIn?: string;
-	preferredDuration?: '1-3 months' | '3-6 months' | '6-12 months' | '12+ months';
-	preferredHouses?: Array<{
-		id: string;
-		name?: string; // Enriched with house name when available
-	}>;
-	linkedinUrl?: string;
-	githubUrl?: string;
-	portfolioUrl?: string;
-	resumeUrl?: string;
-	submittedAt?: string;
-	referralSource?: string;
-	adminNotes?: string;
-	rejectionReason?: string;
-
-	// Enriched reviewer data
-	reviewedBy?: {
-		id: string;
-		name?: string;
-	};
-	reviewedAt?: string;
-
-	// Enriched assignment data
-	assignedHouse?: {
-		id: string;
-		name?: string;
-	};
-	assignedRoom?: {
-		id: string;
-		roomNumber?: string;
-	};
-	createdPersonId?: string;
-	createdUserId?: string;
-
-	// Interviews data
-	interviews?: Array<Omit<SupabaseApplicationInterview,
-		'application_id' | 'interviewer_id' | 'scheduled_time' | 'completed_time' |
-		'interview_notes' | 'created_at' | 'updated_at'> & {
-			interviewerId: string;
-			interviewerName?: string;
-			scheduledTime: string;
-			completedTime?: string;
-			notes?: string;
-		}>;
-
-	// Metadata
-	createdAt: string;
-	updatedAt: string;
-
-	// Computed properties
-	daysSinceSubmission?: number;
-	stage: 'draft' | 'submitted' | 'screening' | 'interviewing' | 'decision' | 'accepted' | 'rejected';
-}
 

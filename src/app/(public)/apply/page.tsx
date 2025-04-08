@@ -36,7 +36,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useUser } from "@/hooks/UserContext";
-import { ApplicationData, getHouseIdFromSlug, submitApplication } from "@/lib/applications";
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from "date-fns";
 import {

@@ -2,8 +2,7 @@ import { PublicLayout } from "@/components/layout/public-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getHouse } from "@/lib/api";
-import { urlFor } from "@/lib/sanity";
+import { urlFor } from "@/lib/sanity/client";
 import {
 	ArrowRight,
 	Bed,
