@@ -2,7 +2,7 @@
 
 import { MaintenanceListCard } from "@/components/dashboard/cards/MaintenanceListCard";
 import { MaintenanceRequestForm } from "@/components/dashboard/cards/MaintenanceRequestForm";
-import { DashboardPanel } from "@/components/dashboard/panels/DashboardPanel";
+import { DashboardPanel } from "@/components/dashboard/DashboardPanel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useParams } from "next/navigation";
 import { useState } from "react";

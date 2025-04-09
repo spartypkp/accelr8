@@ -1,188 +1,353 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useUser } from "@/hooks/UserContext";
 import { cn } from "@/lib/utils";
 import {
+	BarChart3,
+	Building,
 	Calendar,
 	CreditCard,
+	FileText,
 	Home,
+	LayoutDashboard,
 	LogOut,
+	Menu,
 	Settings,
+	ShieldCheck,
+	User,
+	UserCog,
 	Users,
 	Wrench
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { WithUserProps } from "./types";
+import { useMemo } from "react";
 
-export default function DashboardSidebar({ user }: WithUserProps) {
+interface NavItem {
+	title: string;
+	href: string;
+	icon: React.ElementType;
+	variant: "default" | "ghost";
+	roles?: string[];
+	section?: string;
+}
+
+interface SidebarProps {
+	className?: string;
+}
+
+export function Sidebar({ className }: SidebarProps) {
 	const pathname = usePathname();
+	const { user, signOut } = useUser();
 
-	// Parse current path to extract houseId and section (resident or admin)
+	// Extract route information
 	const pathParts = pathname.split("/");
-	const houseId = pathParts.length > 2 ? pathParts[2] : null;
+	const houseId = pathParts.includes("[houseId]") ? pathParts[pathParts.indexOf("[houseId]") + 1] : null;
 	const isAdmin = pathname.includes('/admin');
-	const section = isAdmin ? 'admin' : 'resident';
+	const isResident = pathname.includes('/resident');
+	const isSuperAdmin = pathname.includes('/superadmin');
 
-	// Define base path for links
-	const basePath = houseId ? `/dashboard/${houseId}/${section}` : '/dashboard';
-	const { signOut } = useUser();
+	// Determine current section for active state
+	const currentSection = isSuperAdmin ? 'superadmin' : isAdmin ? 'admin' : isResident ? 'resident' : 'dashboard';
 
-	// Define sidebar links for resident section
-	const residentLinks = [
+	// Generate proper base paths
+	const dashboardPath = "/dashboard";
+	const residentPath = houseId ? `/dashboard/${houseId}/resident` : "/dashboard";
+	const adminPath = houseId ? `/dashboard/${houseId}/admin` : "/dashboard";
+	const superAdminPath = "/dashboard/superadmin";
+
+	// Main navigation items - available to all users
+	const mainNavItems = useMemo<NavItem[]>(() => [
 		{
 			title: "Dashboard",
-			href: houseId ? `/dashboard/${houseId}/resident` : "/dashboard",
-			icon: Home,
-			active: pathname === `/dashboard/${houseId}/resident` || pathname === "/dashboard",
+			href: dashboardPath,
+			icon: LayoutDashboard,
+			variant: pathname === dashboardPath ? "default" : "ghost",
 		},
 		{
-			title: "Community",
-			href: houseId ? `/dashboard/${houseId}/resident/community` : "/dashboard",
-			icon: Users,
-			active: pathname.includes("/resident/community"),
+			title: "Profile",
+			href: `${dashboardPath}/profile`,
+			icon: User,
+			variant: pathname.includes(`/profile`) ? "default" : "ghost",
 		},
 		{
-			title: "Events",
-			href: houseId ? `/dashboard/${houseId}/resident/events` : "/dashboard",
-			icon: Calendar,
-			active: pathname.includes("/resident/events"),
-		},
-		{
-			title: "Maintenance",
-			href: houseId ? `/dashboard/${houseId}/resident/maintenance` : "/dashboard",
-			icon: Wrench,
-			active: pathname.includes("/resident/maintenance"),
-		},
-		{
-			title: "Billing",
-			href: houseId ? `/dashboard/${houseId}/resident/billing` : "/dashboard",
-			icon: CreditCard,
-			active: pathname.includes("/resident/billing"),
-		},
-	];
-
-	// Admin links to show in the admin section
-	const adminLinks = [
-		{
-			title: "Admin Dashboard",
-			href: houseId ? `/dashboard/${houseId}/admin` : "/dashboard",
-			icon: Home,
-			active: pathname === `/dashboard/${houseId}/admin`,
-		},
-		{
-			title: "Residents",
-			href: houseId ? `/dashboard/${houseId}/admin/residents` : "/dashboard",
-			icon: Users,
-			active: pathname.includes("/admin/residents"),
-		},
-		{
-			title: "Operations",
-			href: houseId ? `/dashboard/${houseId}/admin/operations` : "/dashboard",
-			icon: Wrench,
-			active: pathname.includes("/admin/operations"),
-		},
-		{
-			title: "Events",
-			href: houseId ? `/dashboard/${houseId}/admin/events` : "/dashboard",
-			icon: Calendar,
-			active: pathname.includes("/admin/events"),
-		},
-		{
-			title: "Analytics",
-			href: houseId ? `/dashboard/${houseId}/admin/analytics` : "/dashboard",
+			title: "Settings",
+			href: `${dashboardPath}/settings`,
 			icon: Settings,
-			active: pathname.includes("/admin/analytics"),
-		},
-		{
-			title: "Finances",
-			href: houseId ? `/dashboard/${houseId}/admin/finances` : "/dashboard",
-			icon: CreditCard,
-			active: pathname.includes("/admin/finances"),
-		},
-	];
+			variant: pathname.includes(`/settings`) ? "default" : "ghost",
+		}
+	], [dashboardPath, pathname]);
 
-	// Determine which links to display based on current section
-	const currentLinks = isAdmin ? adminLinks : residentLinks;
+	// User specific navigation based on role
+	const roleNavItems = useMemo<NavItem[]>(() => {
+		const items: NavItem[] = [];
 
-	// View toggle link - allows switching between admin and resident views for admins
-	const toggleViewLink = {
-		title: isAdmin ? "Resident View" : "Admin View",
-		href: houseId
-			? `/dashboard/${houseId}/${isAdmin ? 'resident' : 'admin'}`
-			: "/dashboard",
-		icon: Settings,
-	};
+		// Applicant routes
+		if (user?.role === 'applicant') {
+			items.push({
+				title: "My Applications",
+				href: `${dashboardPath}/applications`,
+				icon: FileText,
+				variant: pathname.includes('/applications') ? "default" : "ghost",
+				section: 'applicant'
+			});
+		}
 
+		// Resident routes
+		if (['resident', 'admin', 'super_admin'].includes(user?.role || '')) {
+			items.push({
+				title: "Resident Dashboard",
+				href: residentPath,
+				icon: Home,
+				variant: pathname === residentPath ? "default" : "ghost",
+				section: 'resident'
+			});
+
+			if (isResident || pathname === residentPath) {
+				items.push(
+					{
+						title: "Community",
+						href: `${residentPath}/community`,
+						icon: Users,
+						variant: pathname.includes('/community') ? "default" : "ghost",
+						section: 'resident'
+					},
+					{
+						title: "Events",
+						href: `${residentPath}/events`,
+						icon: Calendar,
+						variant: pathname.includes('/events') ? "default" : "ghost",
+						section: 'resident'
+					},
+					{
+						title: "Maintenance",
+						href: `${residentPath}/maintenance`,
+						icon: Wrench,
+						variant: pathname.includes('/maintenance') ? "default" : "ghost",
+						section: 'resident'
+					},
+					{
+						title: "Billing",
+						href: `${residentPath}/billing`,
+						icon: CreditCard,
+						variant: pathname.includes('/billing') ? "default" : "ghost",
+						section: 'resident'
+					}
+				);
+			}
+		}
+
+		// Admin routes
+		if (['admin', 'super_admin'].includes(user?.role || '')) {
+			items.push({
+				title: "Admin Dashboard",
+				href: adminPath,
+				icon: UserCog,
+				variant: pathname === adminPath ? "default" : "ghost",
+				section: 'admin'
+			});
+
+			if (isAdmin || pathname === adminPath) {
+				items.push(
+					{
+						title: "Residents",
+						href: `${adminPath}/residents`,
+						icon: Users,
+						variant: pathname.includes('/admin/residents') ? "default" : "ghost",
+						section: 'admin'
+					},
+					{
+						title: "Operations",
+						href: `${adminPath}/operations`,
+						icon: Wrench,
+						variant: pathname.includes('/admin/operations') ? "default" : "ghost",
+						section: 'admin'
+					},
+					{
+						title: "Events",
+						href: `${adminPath}/events`,
+						icon: Calendar,
+						variant: pathname.includes('/admin/events') ? "default" : "ghost",
+						section: 'admin'
+					},
+					{
+						title: "Analytics",
+						href: `${adminPath}/analytics`,
+						icon: BarChart3,
+						variant: pathname.includes('/admin/analytics') ? "default" : "ghost",
+						section: 'admin'
+					},
+					{
+						title: "Finances",
+						href: `${adminPath}/finances`,
+						icon: CreditCard,
+						variant: pathname.includes('/admin/finances') ? "default" : "ghost",
+						section: 'admin'
+					}
+				);
+			}
+		}
+
+		// Super Admin routes
+		if (user?.role === 'super_admin') {
+			items.push({
+				title: "Super Admin",
+				href: superAdminPath,
+				icon: ShieldCheck,
+				variant: pathname.includes('/superadmin') ? "default" : "ghost",
+				section: 'superadmin'
+			});
+
+			if (isSuperAdmin) {
+				items.push(
+					{
+						title: "Houses",
+						href: `${superAdminPath}/houses`,
+						icon: Building,
+						variant: pathname.includes('/superadmin/houses') ? "default" : "ghost",
+						section: 'superadmin'
+					},
+					{
+						title: "Users",
+						href: `${superAdminPath}/users`,
+						icon: Users,
+						variant: pathname.includes('/superadmin/users') ? "default" : "ghost",
+						section: 'superadmin'
+					},
+					{
+						title: "Settings",
+						href: `${superAdminPath}/settings`,
+						icon: Settings,
+						variant: pathname.includes('/superadmin/settings') ? "default" : "ghost",
+						section: 'superadmin'
+					}
+				);
+			}
+		}
+
+		return items;
+	}, [
+		user?.role,
+		dashboardPath,
+		residentPath,
+		adminPath,
+		superAdminPath,
+		pathname,
+		isResident,
+		isAdmin,
+		isSuperAdmin
+	]);
+
+	// Handle sign out
 	const handleSignOut = async () => {
 		await signOut();
 		window.location.href = "/login";
 	};
 
 	return (
-		<div className="flex h-full flex-col border-r bg-muted/40 p-4">
-			<div className="flex h-14 items-center px-4 py-2 border-b mb-4">
-				<Link href="/dashboard" className="flex items-center gap-2">
-					<span className="font-bold">Accelr8</span>
-				</Link>
-			</div>
-			<div className="flex-1 overflow-auto py-2">
-				<nav className="grid items-start px-2 gap-2">
-					{currentLinks.map((link) => (
-						<Link key={link.href} href={link.href}>
-							<Button
-								variant={link.active ? "secondary" : "ghost"}
-								className={cn(
-									"w-full justify-start gap-2",
-									link.active ? "font-medium" : "font-normal"
-								)}
-							>
-								<link.icon className="h-4 w-4" />
-								{link.title}
-							</Button>
-						</Link>
-					))}
+		<div className={cn("pb-12 h-full", className)}>
+			<div className="space-y-4 py-4 h-full flex flex-col">
+				<div className="px-4 py-2 flex items-center gap-2 border-b pb-4 mb-4">
+					<Link href="/dashboard" className="flex items-center gap-2">
+						<span className="font-bold">Accelr8</span>
+					</Link>
+				</div>
 
-					{/* View toggle for admins and super_admins */}
-					{(user?.role === "admin" || user?.role === "super_admin") && houseId && (
-						<>
-							<div className="my-2 h-px bg-muted-foreground/20" />
-							<Link href={toggleViewLink.href}>
+				<div className="px-3 flex-1 overflow-auto">
+					<div className="space-y-1">
+						{mainNavItems.map((item) => (
+							<Link key={item.href} href={item.href} className="block">
 								<Button
-									variant="ghost"
-									className="w-full justify-start gap-2"
+									variant={item.variant}
+									size="sm"
+									className="w-full justify-start"
 								>
-									<toggleViewLink.icon className="h-4 w-4" />
-									{toggleViewLink.title}
+									<item.icon className="mr-2 h-4 w-4" />
+									{item.title}
 								</Button>
 							</Link>
+						))}
+					</div>
+
+					{roleNavItems.length > 0 && (
+						<>
+							<div className="py-2">
+								<div className="h-px bg-border" />
+							</div>
+
+							{/* Group nav items by section */}
+							{['applicant', 'resident', 'admin', 'superadmin'].map(section => {
+								const sectionItems = roleNavItems.filter(
+									item => !item.section || item.section === section
+								);
+
+								if (sectionItems.length === 0) return null;
+
+								return (
+									<div key={section} className="space-y-1 mb-6">
+										<p className="text-xs font-medium text-muted-foreground px-2 py-1 uppercase">
+											{section === 'applicant'
+												? 'Applications'
+												: section === 'resident'
+													? 'Resident'
+													: section === 'admin'
+														? 'Admin'
+														: 'Super Admin'}
+										</p>
+										{sectionItems.map((item) => (
+											<Link key={item.href} href={item.href} className="block">
+												<Button
+													variant={item.variant}
+													size="sm"
+													className="w-full justify-start"
+												>
+													<item.icon className="mr-2 h-4 w-4" />
+													{item.title}
+												</Button>
+											</Link>
+										))}
+									</div>
+								);
+							})}
 						</>
 					)}
+				</div>
 
-					{/* Houses link to return to house selection */}
-					<div className="my-2 h-px bg-muted-foreground/20" />
-					<Link href="/dashboard">
-						<Button
-							variant="ghost"
-							className="w-full justify-start gap-2"
-						>
-							<Home className="h-4 w-4" />
-							All Houses
-						</Button>
-					</Link>
-				</nav>
-			</div>
-			<div className="mt-auto border-t pt-4">
-				<Button
-					variant="ghost"
-					className="w-full justify-start gap-2"
-					onClick={handleSignOut}
-				>
-					<LogOut className="h-4 w-4" />
-					Sign out
-				</Button>
+				{/* Sign out button at bottom */}
+				<div className="mt-auto px-3 border-t pt-4">
+					<Button
+						variant="ghost"
+						className="w-full justify-start"
+						onClick={handleSignOut}
+					>
+						<LogOut className="mr-2 h-4 w-4" />
+						Sign out
+					</Button>
+				</div>
 			</div>
 		</div>
 	);
-} 
+}
+
+export function MobileSidebar({ className }: SidebarProps) {
+	return (
+		<Sheet>
+			<SheetTrigger asChild>
+				<Button variant="outline" size="icon" className={className}>
+					<Menu className="h-5 w-5" />
+					<span className="sr-only">Toggle Menu</span>
+				</Button>
+			</SheetTrigger>
+			<SheetContent side="left" className="p-0 w-72">
+				<ScrollArea className="h-full">
+					<Sidebar />
+				</ScrollArea>
+			</SheetContent>
+		</Sheet>
+	);
+}
+
+export default Sidebar; 

@@ -1,7 +1,7 @@
 'use client';
 
 import { BillingInfoCard } from "@/components/dashboard/cards/BillingInfoCard";
-import { DashboardPanel } from "@/components/dashboard/panels/DashboardPanel";
+import { DashboardPanel } from "@/components/dashboard/DashboardPanel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";

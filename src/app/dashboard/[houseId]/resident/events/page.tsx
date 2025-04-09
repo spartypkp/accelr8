@@ -1,7 +1,7 @@
 'use client';
 
 import { EventDetailsCard } from "@/components/dashboard/cards/EventDetailsCard";
-import { DashboardPanel } from "@/components/dashboard/panels/DashboardPanel";
+import { DashboardPanel } from "@/components/dashboard/DashboardPanel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -56,10 +56,49 @@ const UserContext = createContext<UserContextType>({
 });
 
 // Provider component
-export function UserProvider({ children }: { children: React.ReactNode; }) {
-	const [user, setUser] = useState<User | null>(null);
-	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-	const [isLoading, setIsLoading] = useState(true);
+export function UserProvider({
+	children,
+	initialUser
+}: {
+	children: React.ReactNode;
+	initialUser?: {
+		id: string;
+		email: string;
+		role: string;
+	};
+}) {
+	const [user, setUser] = useState<User | null>(() => {
+		// Initialize with server-provided user if available
+		if (initialUser) {
+			return {
+				id: initialUser.id,
+				email: initialUser.email || "",
+				user_metadata: {
+					role: initialUser.role
+				},
+				app_metadata: {},
+				created_at: "",
+				updated_at: "",
+				aud: "",
+			} as User;
+		}
+		return null;
+	});
+	const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
+		// Initialize with server-provided user profile if available
+		if (initialUser) {
+			return {
+				id: initialUser.id,
+				email: initialUser.email || "",
+				role: initialUser.role as any,
+				onboarding_completed: true,
+				created_at: "",
+				updated_at: ""
+			};
+		}
+		return null;
+	});
+	const [isLoading, setIsLoading] = useState(!initialUser);
 	const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
@@ -107,6 +146,11 @@ export function UserProvider({ children }: { children: React.ReactNode; }) {
 
 	// Initialize user and profile on mount
 	useEffect(() => {
+		// Skip initialization if we already have an initialUser
+		if (initialUser && user) {
+			return;
+		}
+
 		const initializeUser = async () => {
 			setIsLoading(true);
 			try {

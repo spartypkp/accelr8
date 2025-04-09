@@ -1,7 +1,7 @@
 'use client';
 
 import { ResidentsListCard } from "@/components/dashboard/cards/ResidentsListCard";
-import { DashboardPanel, DashboardPanelSingle } from "@/components/dashboard/panels/DashboardPanel";
+import { DashboardPanel, DashboardPanelSingle } from "@/components/dashboard/DashboardPanel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {

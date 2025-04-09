@@ -2,6 +2,8 @@ import { PublicLayout } from "@/components/layout/public-layout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getHouse } from "@/lib/api/houses";
+import { getRoomsByHouse } from "@/lib/api/rooms";
 import { urlFor } from "@/lib/sanity/client";
 import {
 	ArrowRight,
@@ -32,8 +34,8 @@ export async function generateMetadata({ params }: { params: { houseId: string; 
 	}
 
 	return {
-		title: `${house.name} | Accelr8 Houses`,
-		description: house.shortDescription,
+		title: `${house.sanityHouse?.name} | Accelr8 Houses`,
+		description: house.sanityHouse?.shortDescription,
 	};
 }
 
@@ -44,22 +46,25 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 		notFound();
 	}
 
+	// Get rooms for this house
+	const rooms = await getRoomsByHouse(params.houseId);
+
 	// Count available and occupied rooms
-	const totalRooms = house.rooms?.length || 0;
-	const availableRooms = house.rooms?.filter(room => room.status === 'available')?.length || 0;
+	const totalRooms = rooms.length || 0;
+	const availableRooms = rooms.filter(room => room.status === 'available').length || 0;
 	const occupiedRooms = totalRooms - availableRooms;
 
-	// Room types based on room data from Supabase
-	const roomTypes = house.rooms ? [
-		...new Set(house.rooms.map(room => room.room_type))
-	].map((type: any) => {
-		const roomsOfType = house.rooms.filter(room => room.room_type === type);
+	// Room types based on room data
+	const roomTypes = rooms.length > 0 ? [
+		...new Set(rooms.map(room => room.sanityRoomType?.name || 'Standard'))
+	].map((type: string) => {
+		const roomsOfType = rooms.filter(room => room.sanityRoomType?.name === type);
 		const availableOfType = roomsOfType.filter(room => room.status === 'available').length;
 
 		return {
-			name: `${String(type).charAt(0).toUpperCase() + String(type).slice(1)} Room`,
-			description: `${type === 'single' ? 'Your own private bedroom' : 'Shared bedroom with 1-2 roommates'}`,
-			price: `$${Math.min(...roomsOfType.map(r => Number(r.monthly_rate)))}/month`,
+			name: type,
+			description: type.toLowerCase().includes('single') ? 'Your own private bedroom' : 'Shared bedroom with 1-2 roommates',
+			price: `$${Math.min(...roomsOfType.map(r => r.current_price || r.sanityRoomType?.basePrice || 1400))}/month`,
 			availability: availableOfType > 0 ? 'Available Now' : 'Waitlist Only'
 		};
 	}) : [];
@@ -82,10 +87,10 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 					<div className="absolute inset-0 bg-gradient-to-b from-background/90 via-transparent to-background/90 z-10"></div>
 
 					{/* House image */}
-					{house.mainImage ? (
+					{house.sanityHouse?.mainImage ? (
 						<Image
-							src={urlFor(house.mainImage).width(1200).url()}
-							alt={house.name || 'House image'}
+							src={urlFor(house.sanityHouse.mainImage).width(1200).url()}
+							alt={house.sanityHouse?.name || 'House image'}
 							fill
 							style={{ objectFit: 'cover' }}
 							priority
@@ -101,7 +106,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 						<div className="container mx-auto">
 							<div className="max-w-4xl">
 								<div className="flex flex-wrap gap-2 mb-3">
-									{house.amenities?.slice(0, 3).map((amenity, index) => (
+									{house.sanityHouse?.amenities?.slice(0, 3).map((amenity, index) => (
 										<Badge key={amenity._key || index} variant="secondary" className="bg-primary/10 text-primary border-primary/20">
 											{amenity.name}
 										</Badge>
@@ -112,15 +117,15 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 									</Badge>
 								</div>
 
-								<h1 className="text-3xl md:text-5xl font-bold mb-2">{house.name}</h1>
+								<h1 className="text-3xl md:text-5xl font-bold mb-2">{house.sanityHouse?.name}</h1>
 
 								<div className="flex items-center text-muted-foreground mb-4">
 									<MapPin className="h-5 w-5 mr-2" />
-									<span>{house.location?.address}, {house.location?.city}, {house.location?.state}</span>
+									<span>{house.sanityHouse?.location?.address}, {house.sanityHouse?.location?.city}, {house.sanityHouse?.location?.state}</span>
 								</div>
 
 								<p className="text-xl text-muted-foreground max-w-2xl">
-									{house.shortDescription}
+									{house.sanityHouse?.shortDescription}
 								</p>
 							</div>
 						</div>
@@ -147,8 +152,8 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 								<TabsContent value="overview" className="space-y-8">
 									<div>
 										<h2 className="text-2xl font-bold mb-4">About This House</h2>
-										<p className="text-muted-foreground mb-4">{house.shortDescription}</p>
-										{house.fullDescription && (
+										<p className="text-muted-foreground mb-4">{house.sanityHouse?.shortDescription}</p>
+										{house.sanityHouse?.fullDescription && (
 											<div className="mt-4">
 												{/* Here you would use PortableText to render the fullDescription properly */}
 												<p className="text-muted-foreground">This house offers a unique living experience for tech professionals and founders.</p>
@@ -173,7 +178,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 									<div>
 										<h3 className="text-xl font-bold mb-4">Amenities</h3>
 										<div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-											{house.amenities?.map((amenity, index) => (
+											{house.sanityHouse?.amenities?.map((amenity, index) => (
 												<div key={amenity._key || index} className="flex flex-col items-center p-3 text-center bg-card rounded-lg border border-border">
 													<div className="mb-2 bg-primary/10 p-2 rounded-full">
 														<Monitor className="h-5 w-5" />
@@ -188,11 +193,11 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 									<div>
 										<h3 className="text-xl font-bold mb-4">Photo Gallery</h3>
 										<div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-											{house.galleryImages?.slice(0, 6).map((image, index) => (
+											{house.sanityHouse?.galleryImages?.slice(0, 6).map((image, index) => (
 												<div key={index} className="aspect-square relative rounded-lg overflow-hidden border border-border">
 													<Image
 														src={urlFor(image).width(400).height(400).url()}
-														alt={`${house.name} - Photo ${index + 1}`}
+														alt={`${house.sanityHouse?.name} - Photo ${index + 1}`}
 														fill
 														style={{ objectFit: 'cover' }}
 													/>
@@ -200,7 +205,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 											))}
 
 											{/* If no gallery images, show placeholders */}
-											{(!house.galleryImages || house.galleryImages.length === 0) && Array(6).fill(0).map((_, index) => (
+											{(!house.sanityHouse?.galleryImages || house.sanityHouse?.galleryImages.length === 0) && Array(6).fill(0).map((_, index) => (
 												<div key={index} className="aspect-square relative rounded-lg overflow-hidden border border-border bg-card flex items-center justify-center">
 													<Building className="h-8 w-8 text-muted-foreground" />
 												</div>
@@ -275,7 +280,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 									<div>
 										<h2 className="text-2xl font-bold mb-4">Our Community</h2>
 										<p className="text-muted-foreground mb-6">
-											{house.name} is home to a diverse group of founders, engineers, designers, and other tech professionals focused on building remarkable products.
+											{house.sanityHouse?.name} is home to a diverse group of founders, engineers, designers, and other tech professionals focused on building remarkable products.
 										</p>
 
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -347,7 +352,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 									<div>
 										<h2 className="text-2xl font-bold mb-4">The Neighborhood</h2>
 										<p className="text-muted-foreground mb-6">
-											Located in {house.location?.city}, our house provides easy access to local amenities and the tech community.
+											Located in {house.sanityHouse?.location?.city}, our house provides easy access to local amenities and the tech community.
 										</p>
 
 										<div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -463,7 +468,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 					<div className="text-center mb-12">
 						<h2 className="text-3xl font-bold mb-4 text-primary-foreground">Frequently Asked Questions</h2>
 						<p className="text-primary-foreground/80 max-w-2xl mx-auto">
-							Here are some common questions about living at {house.name}.
+							Here are some common questions about living at {house.sanityHouse?.name}.
 						</p>
 					</div>
 
@@ -512,7 +517,7 @@ export default async function HouseDetailsPage({ params }: { params: { houseId: 
 							Ready to Join Our Community?
 						</h2>
 						<p className="text-xl text-muted-foreground mb-8">
-							Apply now to secure your spot at {house.name} and start collaborating with other ambitious builders.
+							Apply now to secure your spot at {house.sanityHouse?.name} and start collaborating with other ambitious builders.
 						</p>
 						<div className="flex flex-col sm:flex-row justify-center gap-4">
 							<Button asChild size="lg">
