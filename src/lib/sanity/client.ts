@@ -40,7 +40,8 @@ export const createSanityClient = (): SanityClient => {
 		projectId,
 		dataset,
 		apiVersion,
-		useCdn: process.env.NODE_ENV === 'production' // Use CDN in production, live API in development
+		useCdn: process.env.NODE_ENV === 'production', // Use CDN in production, live API in development
+		token: process.env.SANITY_API_TOKEN // Add this line to include the token
 	});
 
 	return client;

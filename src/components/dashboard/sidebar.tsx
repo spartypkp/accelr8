@@ -48,16 +48,16 @@ export function Sidebar({ className }: SidebarProps) {
 	const houseId = pathParts.includes("[houseId]") ? pathParts[pathParts.indexOf("[houseId]") + 1] : null;
 	const isAdmin = pathname.includes('/admin');
 	const isResident = pathname.includes('/resident');
-	const isSuperAdmin = pathname.includes('/superadmin');
+	const isSuperAdmin = pathname.includes('/superAdmin');
 
 	// Determine current section for active state
-	const currentSection = isSuperAdmin ? 'superadmin' : isAdmin ? 'admin' : isResident ? 'resident' : 'dashboard';
+	const currentSection = isSuperAdmin ? 'superAdmin' : isAdmin ? 'admin' : isResident ? 'resident' : 'dashboard';
 
 	// Generate proper base paths
 	const dashboardPath = "/dashboard";
 	const residentPath = houseId ? `/dashboard/${houseId}/resident` : "/dashboard";
 	const adminPath = houseId ? `/dashboard/${houseId}/admin` : "/dashboard";
-	const superAdminPath = "/dashboard/superadmin";
+	const superAdminPath = "/dashboard/superAdmin";
 
 	// Main navigation items - available to all users
 	const mainNavItems = useMemo<NavItem[]>(() => [
@@ -197,8 +197,8 @@ export function Sidebar({ className }: SidebarProps) {
 				title: "Super Admin",
 				href: superAdminPath,
 				icon: ShieldCheck,
-				variant: pathname.includes('/superadmin') ? "default" : "ghost",
-				section: 'superadmin'
+				variant: pathname.includes('/superAdmin') ? "default" : "ghost",
+				section: 'superAdmin'
 			});
 
 			if (isSuperAdmin) {
@@ -207,22 +207,36 @@ export function Sidebar({ className }: SidebarProps) {
 						title: "Houses",
 						href: `${superAdminPath}/houses`,
 						icon: Building,
-						variant: pathname.includes('/superadmin/houses') ? "default" : "ghost",
-						section: 'superadmin'
+						variant: pathname.includes('/superAdmin/houses') ? "default" : "ghost",
+						section: 'superAdmin'
+					},
+					{
+						title: "New House",
+						href: `${superAdminPath}/expansion`,
+						icon: Building,
+						variant: pathname.includes('/superAdmin/expansion') ? "default" : "ghost",
+						section: 'superAdmin'
+					},
+					{
+						title: "Applications",
+						href: `${superAdminPath}/applications`,
+						icon: FileText,
+						variant: pathname.includes('/superAdmin/applications') ? "default" : "ghost",
+						section: 'superAdmin'
 					},
 					{
 						title: "Users",
 						href: `${superAdminPath}/users`,
 						icon: Users,
-						variant: pathname.includes('/superadmin/users') ? "default" : "ghost",
-						section: 'superadmin'
+						variant: pathname.includes('/superAdmin/users') ? "default" : "ghost",
+						section: 'superAdmin'
 					},
 					{
 						title: "Settings",
 						href: `${superAdminPath}/settings`,
 						icon: Settings,
-						variant: pathname.includes('/superadmin/settings') ? "default" : "ghost",
-						section: 'superadmin'
+						variant: pathname.includes('/superAdmin/settings') ? "default" : "ghost",
+						section: 'superAdmin'
 					}
 				);
 			}
@@ -279,7 +293,7 @@ export function Sidebar({ className }: SidebarProps) {
 							</div>
 
 							{/* Group nav items by section */}
-							{['applicant', 'resident', 'admin', 'superadmin'].map(section => {
+							{['applicant', 'resident', 'admin', 'superAdmin'].map(section => {
 								const sectionItems = roleNavItems.filter(
 									item => !item.section || item.section === section
 								);

@@ -80,50 +80,71 @@ export async function getAuthenticatedUser(user: User): Promise<UserProfile | nu
  */
 export async function getUser(id: string): Promise<UserProfile | null> {
 	try {
+		console.log('🔍 getUser called with id:', id);
+
 		const sanityClient = createSanityClient();
 		const supabase = await createClient();
 
 		// 1. Get user auth data
-		const { data: authData } = await supabase.auth.admin.getUserById(id);
+		const { data: { user } } = await supabase.auth.getUser();
 
-		if (!authData?.user) {
+
+		if (!user) {
+			console.error('❌ No user found with id:', id);
 			return null;
 		}
 
+		console.log('✅ Auth user found:', user.id);
+
 		// Extract auth metadata
 		const authUser: SupabaseAuthUser = {
-			id: authData.user.id,
-			email: authData.user.email,
-			role: (authData.user.user_metadata?.role || 'applicant') as UserRole,
-			sanity_person_id: authData.user.user_metadata?.sanity_person_id,
-			onboarding_completed: authData.user.user_metadata?.onboarding_completed || false
+			id: user.id,
+			email: user.email,
+			role: (user.user_metadata?.role || 'applicant') as UserRole,
+			sanity_person_id: user.user_metadata?.sanity_person_id,
+			onboarding_completed: user.user_metadata?.onboarding_completed || false
 		};
+
+		console.log('🔍 Auth user metadata:', JSON.stringify(authUser, null, 2));
 
 		// 2. Fetch extended user data and Sanity profile in parallel
-		const [extendedUserResult, sanityPerson] = await Promise.all([
-			supabase
-				.from('accelr8_users')
-				.select('*')
-				.eq('id', id)
-				.single(),
-			authUser.sanity_person_id ?
-				sanityClient.fetch(
-					`*[_type == "person" && _id == $id][0]`,
-					{ id: authUser.sanity_person_id }
-				) :
-				null
-		]);
+		try {
+			const [extendedUserResult, sanityPerson] = await Promise.all([
+				supabase
+					.from('accelr8_users')
+					.select('*')
+					.eq('id', id)
+					.single(),
+				authUser.sanity_person_id ?
+					sanityClient.fetch(
+						`*[_type == "person" && _id == $id][0]`,
+						{ id: authUser.sanity_person_id }
+					) :
+					null
+			]);
 
-		// Create extended user combining auth and profile data
-		const extendedUser: SupabaseExtendedUser = {
-			...authUser,
-			...extendedUserResult.data
-		};
+			if (extendedUserResult.error) {
+				console.error('❌ Error fetching extended user data:', extendedUserResult.error);
+				throw extendedUserResult.error;
+			}
 
-		// 3. Enhance and return combined profile
-		return enhanceUserWithSanityData(extendedUser, sanityPerson);
+			console.log('✅ Extended user data found:', extendedUserResult.data ? 'yes' : 'no');
+			console.log('✅ Sanity person found:', sanityPerson ? 'yes' : 'no');
+
+			// Create extended user combining auth and profile data
+			const extendedUser: SupabaseExtendedUser = {
+				...authUser,
+				...extendedUserResult.data
+			};
+
+			// 3. Enhance and return combined profile
+			return enhanceUserWithSanityData(extendedUser, sanityPerson);
+		} catch (fetchError) {
+			console.error('❌ Error fetching user data:', fetchError);
+			throw fetchError;
+		}
 	} catch (error) {
-		console.error('Error fetching user:', error);
+		console.error('❌ Error in getUser:', error);
 		throw new ApiError(
 			'Failed to fetch user profile',
 			500,
@@ -140,51 +161,57 @@ export async function getUsers(options: UserQueryOptions = {}): Promise<UserProf
 		const sanityClient = createSanityClient();
 		const supabase = await createClient();
 
-		// 1. Fetch users from Supabase Auth (may need to implement pagination)
-		const { data: authUsers, error } = await supabase.auth.admin.listUsers();
+		// Instead of admin.listUsers, we'll need to fetch users from the accelr8_users table
+		// and rely on RLS policies to restrict access
+		const { data: extendedUsers, error } = await supabase
+			.from('accelr8_users')
+			.select('*');
 
 		if (error) throw error;
 
-		// Apply role filter if specified
-		let filteredUsers = authUsers.users;
+		if (!extendedUsers) {
+			return [];
+		}
+
+		// Get the current authenticated user
+		const { data: { user: currentUser } } = await supabase.auth.getUser();
+		if (!currentUser) {
+			throw new ApiError('Not authenticated', 401);
+		}
+
+		// We'll only have access to users in accelr8_users
+		let filteredUserIds = extendedUsers.map(user => user.id);
+
+		// Apply role filter if specified (using the data we have)
 		if (options.role && options.role !== 'all') {
-			filteredUsers = filteredUsers.filter(user =>
-				user.user_metadata?.role === options.role
-			);
+			filteredUserIds = extendedUsers
+				.filter(user => user.role === options.role)
+				.map(user => user.id);
 		}
 
 		// Apply search filter if specified
 		if (options.search) {
 			const searchTerm = options.search.toLowerCase();
-			filteredUsers = filteredUsers.filter(user =>
-				user.email?.toLowerCase().includes(searchTerm) ||
-				user.user_metadata?.name?.toLowerCase().includes(searchTerm)
-			);
+			filteredUserIds = extendedUsers
+				.filter(user =>
+					user.email?.toLowerCase().includes(searchTerm) ||
+					user.name?.toLowerCase().includes(searchTerm)
+				)
+				.map(user => user.id);
 		}
 
 		// Apply pagination if specified
+		let paginatedUsers = extendedUsers;
 		if (options.limit) {
 			const offset = options.offset || 0;
-			filteredUsers = filteredUsers.slice(offset, offset + options.limit);
+			paginatedUsers = extendedUsers.slice(offset, offset + options.limit);
+			filteredUserIds = paginatedUsers.map(user => user.id);
 		}
 
-		// 2. Fetch all extended user data
-		const { data: extendedUsers } = await supabase
-			.from('accelr8_users')
-			.select('*');
-
-		// Create a map for quick lookup
-		const extendedUserMap = extendedUsers ?
-			extendedUsers.reduce((map, user) => {
-				map[user.id] = user;
-				return map;
-			}, {} as Record<string, SupabaseExtendedUser>) :
-			{};
-
 		// 3. Fetch all Sanity person documents for these users
-		const sanityPersonIds = filteredUsers
-			.map(user => user.user_metadata?.sanity_person_id)
-			.filter(Boolean) as string[];
+		const sanityPersonIds = extendedUsers
+			.filter(user => user.sanity_person_id)
+			.map(user => user.sanity_person_id) as string[];
 
 		let sanityPersons: any[] = [];
 		if (sanityPersonIds.length > 0) {
@@ -208,32 +235,29 @@ export async function getUsers(options: UserQueryOptions = {}): Promise<UserProf
 
 			// Only include users with sanity profiles in this house
 			const housePersonIds = new Set(sanityPersons.map(person => person._id));
-			filteredUsers = filteredUsers.filter(user =>
-				housePersonIds.has(user.user_metadata?.sanity_person_id)
-			);
+			filteredUserIds = extendedUsers
+				.filter(user => user.sanity_person_id && housePersonIds.has(user.sanity_person_id))
+				.map(user => user.id);
 		}
 
-		// 5. Enhance and return profiles
-		return filteredUsers.map(user => {
-			const authUser: SupabaseAuthUser = {
-				id: user.id,
-				email: user.email,
-				role: (user.user_metadata?.role || 'applicant') as UserRole,
-				sanity_person_id: user.user_metadata?.sanity_person_id,
-				onboarding_completed: user.user_metadata?.onboarding_completed || false
-			};
+		// 5. Build and return user profiles
+		return extendedUsers
+			.filter(user => filteredUserIds.includes(user.id))
+			.map(user => {
+				const authUser: SupabaseAuthUser = {
+					id: user.id,
+					email: user.email,
+					role: user.role as UserRole,
+					sanity_person_id: user.sanity_person_id,
+					onboarding_completed: user.onboarding_completed || false
+				};
 
-			const extendedUser: SupabaseExtendedUser = {
-				...authUser,
-				...extendedUserMap[user.id]
-			};
+				const sanityPerson = user.sanity_person_id ?
+					sanityPersonMap[user.sanity_person_id] :
+					null;
 
-			const sanityPerson = authUser.sanity_person_id ?
-				sanityPersonMap[authUser.sanity_person_id] :
-				null;
-
-			return enhanceUserWithSanityData(extendedUser, sanityPerson);
-		});
+				return enhanceUserWithSanityData(user, sanityPerson);
+			});
 	} catch (error) {
 		console.error('Error fetching users:', error);
 		throw new ApiError(
@@ -286,23 +310,33 @@ export async function createUser(data: UserProfileInput): Promise<UserProfile> {
 			sanityPersonId = sanityResult._id;
 		}
 
-		// 2. Create Supabase auth user with metadata
-		const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+		// 2. Create Supabase auth user via signup
+		// Note: This requires a sign-up function that's publicly accessible
+		// For admin purposes, this should be moved to a secure server endpoint
+		const { data: authData, error: authError } = await supabase.auth.signUp({
 			email: data.email,
 			password: temporaryPassword,
-			email_confirm: true,
-			user_metadata: {
-				role: data.role || 'applicant',
-				onboarding_completed: data.onboarding_completed || false,
-				...(sanityPersonId && { sanity_person_id: sanityPersonId })
+			options: {
+				data: {
+					role: data.role || 'applicant',
+					onboarding_completed: data.onboarding_completed || false,
+					...(sanityPersonId && { sanity_person_id: sanityPersonId })
+				}
 			}
 		});
 
 		if (authError) throw authError;
+		if (!authData.user) {
+			throw new ApiError('Failed to create user', 500);
+		}
 
 		// 3. Create extended user data
 		const extendedUserData = {
 			id: authData.user.id,
+			email: data.email,
+			role: data.role || 'applicant',
+			onboarding_completed: data.onboarding_completed || false,
+			sanity_person_id: sanityPersonId,
 			phone_number: data.phone_number,
 			emergency_contact_name: data.emergency_contact_name,
 			emergency_contact_phone: data.emergency_contact_phone
@@ -331,17 +365,37 @@ export async function createUser(data: UserProfileInput): Promise<UserProfile> {
  */
 export async function updateUser(id: string, data: UserProfileInput): Promise<UserProfile> {
 	try {
+		console.log('🔍 updateUser called with id:', id);
+		console.log('🔍 updateUser data:', JSON.stringify(data, null, 2));
+
 		const sanityClient = createSanityClient();
 		const supabase = await createClient();
 
+		// Get current user for permission check
+		const { data: { user: currentUser } } = await supabase.auth.getUser();
+		if (!currentUser) {
+			throw new ApiError('Not authenticated', 401);
+		}
+
+		// Only allow users to update their own profiles unless they're admins
+		if (id !== currentUser.id &&
+			currentUser.user_metadata?.role !== 'admin' &&
+			currentUser.user_metadata?.role !== 'super_admin') {
+			throw new ApiError('Not authorized to update other users', 403);
+		}
+
 		// Check if the user exists
 		const existingUser = await getUser(id);
+		console.log('🔍 existingUser found:', existingUser ? 'yes' : 'no');
+
 		if (!existingUser) {
+			console.error('❌ User not found with id:', id);
 			throw new ApiError('User not found', 404);
 		}
 
 		// 1. Update Sanity person if it exists and changes were provided
 		if (existingUser.sanity_person_id && data.sanityPerson) {
+			console.log('🔍 Updating Sanity person with id:', existingUser.sanity_person_id);
 			// Prepare Sanity updates
 			const sanityUpdates: Record<string, any> = {
 				_id: existingUser.sanity_person_id,
@@ -365,26 +419,52 @@ export async function updateUser(id: string, data: UserProfileInput): Promise<Us
 				sanityUpdates.socialLinks = data.sanityPerson.socialLinks;
 			}
 
+			console.log('🔍 Sanity updates:', JSON.stringify(sanityUpdates, null, 2));
+
 			// Only update if there are changes
 			if (Object.keys(sanityUpdates).length > 2) {
-				await sanityClient.patch(existingUser.sanity_person_id).set(sanityUpdates).commit();
+				try {
+					await sanityClient.patch(existingUser.sanity_person_id).set(sanityUpdates).commit();
+					console.log('✅ Sanity person updated successfully');
+				} catch (error) {
+					console.error('❌ Error updating Sanity person:', error);
+					throw error;
+				}
 			}
 		}
 
 		// 2. Update auth user metadata if changes were provided
 		if (data.role || data.onboarding_completed !== undefined) {
+			console.log('🔍 Updating auth user metadata');
 			const updates = {
 				...(data.role && { role: data.role }),
 				...(data.onboarding_completed !== undefined && { onboarding_completed: data.onboarding_completed })
 			};
 
 			if (Object.keys(updates).length > 0) {
-				await supabase.auth.admin.updateUserById(id, {
-					user_metadata: {
-						...existingUser,
-						...updates
+				try {
+					// Update via updateUser (current user only)
+					if (id === currentUser.id) {
+						await supabase.auth.updateUser({
+							data: updates
+						});
+					} else {
+						// This is an admin operation - move to admin-only API endpoint
+						console.log('⚠️ Skipping auth metadata update - requires admin rights');
+						// Alternatively, update just the accelr8_users table with this info
+						await supabase
+							.from('accelr8_users')
+							.update({
+								role: data.role,
+								onboarding_completed: data.onboarding_completed
+							})
+							.eq('id', id);
 					}
-				});
+					console.log('✅ User metadata updated successfully');
+				} catch (error) {
+					console.error('❌ Error updating auth user metadata:', error);
+					throw error;
+				}
 			}
 		}
 
@@ -395,17 +475,26 @@ export async function updateUser(id: string, data: UserProfileInput): Promise<Us
 			...(data.emergency_contact_phone !== undefined && { emergency_contact_phone: data.emergency_contact_phone })
 		};
 
+		console.log('🔍 Extended updates:', JSON.stringify(extendedUpdates, null, 2));
+
 		if (Object.keys(extendedUpdates).length > 0) {
-			await supabase
-				.from('accelr8_users')
-				.update(extendedUpdates)
-				.eq('id', id);
+			try {
+				await supabase
+					.from('accelr8_users')
+					.update(extendedUpdates)
+					.eq('id', id);
+				console.log('✅ Extended user data updated successfully');
+			} catch (error) {
+				console.error('❌ Error updating extended user data:', error);
+				throw error;
+			}
 		}
 
 		// 4. Return the updated user
+		console.log('✅ Update completed, fetching updated user');
 		return getUser(id) as Promise<UserProfile>;
 	} catch (error) {
-		console.error('Error updating user:', error);
+		console.error('❌ Error updating user:', error);
 		throw new ApiError(
 			'Failed to update user',
 			500,
@@ -422,6 +511,19 @@ export async function deleteUser(id: string): Promise<boolean> {
 		const sanityClient = createSanityClient();
 		const supabase = await createClient();
 
+		// Get the current user for permission check
+		const { data: { user: currentUser } } = await supabase.auth.getUser();
+		if (!currentUser) {
+			throw new ApiError('Not authenticated', 401);
+		}
+
+		// Only allow users to delete their own accounts unless they're admins
+		if (id !== currentUser.id &&
+			currentUser.user_metadata?.role !== 'admin' &&
+			currentUser.user_metadata?.role !== 'super_admin') {
+			throw new ApiError('Not authorized to delete other users', 403);
+		}
+
 		// 1. Get the user to check Sanity ID
 		const user = await getUser(id);
 		if (!user) {
@@ -433,10 +535,21 @@ export async function deleteUser(id: string): Promise<boolean> {
 			await sanityClient.delete(user.sanity_person_id);
 		}
 
-		// 3. Delete from Supabase Auth
-		const { error } = await supabase.auth.admin.deleteUser(id);
+		// 3. Delete from accelr8_users table first
+		const { error: deleteUserError } = await supabase
+			.from('accelr8_users')
+			.delete()
+			.eq('id', id);
 
-		if (error) throw error;
+		if (deleteUserError) throw deleteUserError;
+
+		// 4. For self-deletion, use auth.signOut()
+		if (id === currentUser.id) {
+			await supabase.auth.signOut();
+		} else {
+			// This is an admin operation that should be moved to a secure server endpoint
+			console.log('⚠️ Admin user deletion not supported through client API');
+		}
 
 		return true;
 	} catch (error) {

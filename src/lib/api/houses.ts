@@ -18,7 +18,17 @@ import { ApiError } from './shared/error';
  */
 export type HouseInput = {
 	name?: string;
-	// Include other common properties that could be updated
+	slug?: string;
+	active?: boolean;
+	shortDescription?: string;
+	capacity?: number;
+	location?: {
+		address?: string;
+		city?: string;
+		state?: string;
+		zipCode?: string;
+		country?: string;
+	};
 } & Partial<SupabaseHouseOperations>;
 
 /**
@@ -157,12 +167,35 @@ export async function createHouse(data: HouseInput): Promise<House | null> {
 		const sanityClient = createSanityClient();
 		const supabase = await createClient();
 
-		// 1. Create Sanity document first - TODO: Use proper Sanity house creation logic
-		const sanityData = {
-			_type: 'house' as const,
+		// 1. Prepare Sanity document
+		// Use type assertion to allow additional properties
+		const sanityData: any = {
+			_type: 'house',
 			name: data.name || 'New House',
-			active: true
+			active: data.active !== undefined ? data.active : true
 		};
+
+		// Add optional fields if provided
+		if (data.slug) {
+			sanityData.slug = {
+				_type: 'slug',
+				current: data.slug
+			};
+		}
+
+		if (data.shortDescription) {
+			sanityData.shortDescription = data.shortDescription;
+		}
+
+		if (data.capacity) {
+			sanityData.capacity = data.capacity;
+		}
+
+		if (data.location) {
+			sanityData.location = { ...data.location };
+		}
+
+		// Create the Sanity document
 		const sanityHouse = await sanityClient.create(sanityData);
 		sanityHouseId = sanityHouse._id;
 

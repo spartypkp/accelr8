@@ -58,60 +58,55 @@ const UserContext = createContext<UserContextType>({
 // Provider component
 export function UserProvider({
 	children,
-	initialUser
+
 }: {
 	children: React.ReactNode;
-	initialUser?: {
-		id: string;
-		email: string;
-		role: string;
-	};
+
 }) {
-	const [user, setUser] = useState<User | null>(() => {
-		// Initialize with server-provided user if available
-		if (initialUser) {
-			return {
-				id: initialUser.id,
-				email: initialUser.email || "",
-				user_metadata: {
-					role: initialUser.role
-				},
-				app_metadata: {},
-				created_at: "",
-				updated_at: "",
-				aud: "",
-			} as User;
-		}
-		return null;
-	});
-	const [userProfile, setUserProfile] = useState<UserProfile | null>(() => {
-		// Initialize with server-provided user profile if available
-		if (initialUser) {
-			return {
-				id: initialUser.id,
-				email: initialUser.email || "",
-				role: initialUser.role as any,
-				onboarding_completed: true,
-				created_at: "",
-				updated_at: ""
-			};
-		}
-		return null;
-	});
-	const [isLoading, setIsLoading] = useState(!initialUser);
+	const [user, setUser] = useState<User | null>(null);
+	const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
+	const [isLoading, setIsLoading] = useState(true);
 	const [isLoadingProfile, setIsLoadingProfile] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isAdmin, setIsAdmin] = useState(false);
+	const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+	const [isResident, setIsResident] = useState(false);
+	const [isApplicant, setIsApplicant] = useState(false);
 
 	const router = useRouter();
 	const pathname = usePathname();
 	const supabase = createClient();
 	const sanityClient = createSanityClient();
 
-	// Computed properties based on user profile
-	const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'super_admin' || false;
-	const isSuperAdmin = userProfile?.role === 'super_admin' || false;
-	const isResident = userProfile?.role === 'resident' || false;
-	const isApplicant = userProfile?.role === 'applicant' || false;
+	// Unified function to fetch the complete user profile
+	const fetchUserProfile = async (): Promise<UserProfile | null> => {
+		if (!user) return null;
+
+		setIsLoadingProfile(true);
+		try {
+			const profile = await getAuthenticatedUser(user);
+
+			if (profile) {
+				// Update the state
+				setUserProfile(profile);
+
+				// Set role flags
+				setIsAdmin(profile.role === 'admin' || profile.role === 'super_admin' || false);
+				setIsSuperAdmin(profile.role === 'super_admin' || false);
+				setIsResident(profile.role === 'resident' || false);
+				setIsApplicant(profile.role === 'applicant' || false);
+
+				return profile;
+			}
+			return null;
+		} catch (err) {
+			console.error('Unexpected error fetching user profile:', err);
+			return null;
+		} finally {
+			setIsLoadingProfile(false);
+		}
+	};
 
 	// Function to update last_active timestamp
 	const updateLastActive = async (userId: string) => {
@@ -125,32 +120,8 @@ export function UserProvider({
 		}
 	};
 
-	// Unified function to fetch the complete user profile
-	const fetchUserProfile = async (): Promise<UserProfile | null> => {
-		if (!user) return null;
-
-		setIsLoadingProfile(true);
-		try {
-			const profile = await getAuthenticatedUser(user);
-
-			// Update the state
-			setUserProfile(profile);
-			return profile;
-		} catch (err) {
-			console.error('Unexpected error fetching user profile:', err);
-			return null;
-		} finally {
-			setIsLoadingProfile(false);
-		}
-	};
-
 	// Initialize user and profile on mount
 	useEffect(() => {
-		// Skip initialization if we already have an initialUser
-		if (initialUser && user) {
-			return;
-		}
-
 		const initializeUser = async () => {
 			setIsLoading(true);
 			try {
@@ -180,6 +151,10 @@ export function UserProvider({
 						} else {
 							setUser(null);
 							setUserProfile(null);
+							setIsAdmin(false);
+							setIsSuperAdmin(false);
+							setIsResident(false);
+							setIsApplicant(false);
 						}
 
 						// Handle sign out
@@ -203,7 +178,7 @@ export function UserProvider({
 
 		initializeUser();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+	}, [pathname]); // Only re-run when the pathname changes, not on every render
 
 	// Auth functions
 	const signIn = async (email: string, password: string) => {
@@ -270,43 +245,59 @@ export function UserProvider({
 		}
 	};
 
-	// Update user profile function
 	const updateUserProfile = async (data: Partial<UserProfile>) => {
 		setError(null);
 		try {
+			console.log('🔍 updateUserProfile called with data:', JSON.stringify(data, null, 2));
+
 			if (!user) {
-				const error = new Error('User not authenticated');
-				setError(error.message);
-				return { error };
+				console.error('❌ No user logged in');
+				return { error: new Error('No user logged in') };
 			}
 
-			// Call the server action directly
-			await updateUser(user.id, data);
+			console.log('🔍 Current user ID:', user.id);
 
-			// Refresh the profile to get the latest data
-			await fetchUserProfile();
+			// Call API to update user
+			try {
+				const updatedUser = await updateUser(user.id, data);
+				console.log('✅ User updated successfully:', updatedUser ? 'yes' : 'no');
 
-			return { error: null };
+				if (updatedUser) {
+					// Update local state
+					setUserProfile(updatedUser);
+					setIsAdmin(updatedUser.role === 'admin' || updatedUser.role === 'super_admin' || false);
+					setIsSuperAdmin(updatedUser.role === 'super_admin' || false);
+					setIsResident(updatedUser.role === 'resident' || false);
+					setIsApplicant(updatedUser.role === 'applicant' || false);
+				}
+
+				return { error: null };
+			} catch (apiErr) {
+				console.error('❌ API error updating user:', apiErr);
+				throw apiErr;
+			}
 		} catch (err) {
 			const error = err as Error;
+			console.error('❌ Error in updateUserProfile:', error.message);
 			setError(error.message);
 			return { error };
 		}
 	};
 
-	// Sign out function
 	const signOut = async () => {
-		setError(null);
 		try {
 			await supabase.auth.signOut();
-			router.push('/login');
+			setUser(null);
+			setUserProfile(null);
+			setIsAdmin(false);
+			setIsSuperAdmin(false);
+			setIsResident(false);
+			setIsApplicant(false);
 		} catch (err) {
-			const error = err as Error;
-			setError(error.message);
+			console.error('Error signing out:', err);
 		}
 	};
 
-	// Reset password function
 	const resetPassword = async (email: string) => {
 		setError(null);
 		try {
@@ -327,32 +318,31 @@ export function UserProvider({
 		}
 	};
 
-	const value: UserContextType = {
-		user,
-		userProfile,
-		isLoading,
-		isLoadingProfile,
-		error,
-		fetchUserProfile,
-		signIn,
-		signUp,
-		signOut,
-		resetPassword,
-		updateUserProfile,
-		isAdmin,
-		isSuperAdmin,
-		isResident,
-		isApplicant
-	};
-
-	return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
+	return (
+		<UserContext.Provider
+			value={{
+				user,
+				isLoading,
+				error,
+				userProfile,
+				isLoadingProfile,
+				fetchUserProfile,
+				signIn,
+				signUp,
+				signOut,
+				resetPassword,
+				updateUserProfile,
+				isAdmin,
+				isSuperAdmin,
+				isResident,
+				isApplicant
+			}}
+		>
+			{children}
+		</UserContext.Provider>
+	);
 }
 
-// Custom hook
 export function useUser() {
-	const context = useContext(UserContext);
-	if (!context) {
-		throw new Error('useUser must be used within a UserProvider');
-	}
-	return context;
+	return useContext(UserContext);
 }
