@@ -308,7 +308,7 @@ export default function DashboardPage() {
 											</div>
 											<div className="grid grid-cols-2 gap-2">
 												<Button
-													onClick={() => router.push(`/dashboard/${house.sanityHouse?.slug?.current}/resident`)}
+													onClick={() => router.push(`/dashboard/${house.id}/resident`)}
 													className="w-full"
 												>
 													Resident
@@ -317,7 +317,7 @@ export default function DashboardPage() {
 												{(isAdmin || isSuperAdmin) && (
 													<Button
 														variant="outline"
-														onClick={() => router.push(`/dashboard/${house.sanityHouse?.slug?.current}/admin`)}
+														onClick={() => router.push(`/dashboard/${house.id}/admin`)}
 														className="w-full"
 													>
 														Admin

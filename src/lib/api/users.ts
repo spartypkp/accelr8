@@ -6,6 +6,7 @@ import {
 import { createSanityClient } from '../sanity/client';
 import { createClient } from '../supabase/server';
 import { SupabaseAuthUser, SupabaseExtendedUser, UserProfile, UserRole } from '../types';
+import { sendResidentInvitation } from './emails';
 import { ApiError } from './shared/error';
 /**
  * Input type for creating/updating a user
@@ -22,6 +23,16 @@ export interface UserQueryOptions {
 	limit?: number;
 	offset?: number;
 	active?: boolean;
+}
+
+/**
+ * Invitation data for directly creating a resident
+ */
+export interface ResidentInviteData {
+	email: string;
+	name: string;
+	houseId: string;
+	moveInDate?: string;
 }
 
 /**
@@ -270,9 +281,110 @@ export async function getUsers(options: UserQueryOptions = {}): Promise<UserProf
 
 /**
  * Get users by house ID
+ * @param houseId Supabase UUID of the house (house.id)
+ * @returns Array of user profiles who are residents of the specified house
  */
 export async function getUsersByHouse(houseId: string): Promise<UserProfile[]> {
 	return getUsers({ houseId, role: 'resident' });
+}
+
+/**
+ * Invite a user directly as a resident, bypassing the application process
+ * Only admins or super_admins can use this function
+ */
+export async function inviteResident(data: ResidentInviteData): Promise<UserProfile> {
+	try {
+		const sanityClient = createSanityClient();
+		const supabase = await createClient();
+
+		// Permission check - only admins can invite residents
+		const { data: { user: currentUser } } = await supabase.auth.getUser();
+		if (!currentUser ||
+			(currentUser.user_metadata?.role !== 'admin' &&
+				currentUser.user_metadata?.role !== 'super_admin')) {
+			throw new ApiError('Not authorized to invite residents', 403);
+		}
+
+		// Validate required fields
+		if (!data.email || !data.name || !data.houseId) {
+			throw new ApiError('Email, name, and houseId are required', 400);
+		}
+
+		// 1. Create Sanity person document with minimal info
+		const sanityPerson = await sanityClient.create({
+			_type: 'person',
+			name: data.name,
+			email: data.email,
+			role: 'Resident', // Default role
+			isResident: true,
+			isTeamMember: false,
+			house: { _type: 'reference', _ref: data.houseId },
+			startDate: data.moveInDate || new Date().toISOString().split('T')[0]
+		});
+
+		// 2. Generate random temporary password
+		const temporaryPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+
+		// 3. Create Supabase auth user with resident role
+		const { data: authData, error: authError } = await supabase.auth.signUp({
+			email: data.email,
+			password: temporaryPassword,
+			options: {
+				data: {
+					role: 'resident',
+					onboarding_completed: false,
+					sanity_person_id: sanityPerson._id
+				}
+			}
+		});
+
+		if (authError) throw authError;
+		if (!authData.user) {
+			throw new ApiError('Failed to create user', 500);
+		}
+
+		// 4. Create extended user record with minimal info
+		const extendedUserData = {
+			id: authData.user.id,
+			email: data.email,
+			name: data.name,
+			role: 'resident' as UserRole,
+			onboarding_completed: false,
+			sanity_person_id: sanityPerson._id
+		};
+
+		const { error: extendedError } = await supabase
+			.from('accelr8_users')
+			.insert(extendedUserData);
+
+		if (extendedError) throw extendedError;
+
+		// 5. Send invitation email using Supabase's email service
+		// Get inviter's name
+		const inviterProfile = await getUser(currentUser.id);
+		const inviterName = inviterProfile?.sanityPerson?.name || 'Accelr8 Admin';
+
+		const { success, error: emailError } = await sendResidentInvitation(
+			data.email,
+			data.name,
+			temporaryPassword,
+			inviterName
+		);
+
+		if (!success) {
+			console.warn(`Warning: Invitation email to ${data.email} could not be sent: ${emailError}`);
+		}
+
+		// 6. Return the complete user profile
+		return getUser(authData.user.id) as Promise<UserProfile>;
+	} catch (error) {
+		console.error('Error inviting resident:', error);
+		throw new ApiError(
+			'Failed to invite resident',
+			500,
+			error
+		);
+	}
 }
 
 /**

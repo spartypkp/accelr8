@@ -72,7 +72,7 @@ export function Sidebar({ className }: SidebarProps) {
 	// Main navigation items - available to all users
 	const mainNavItems = useMemo<NavItem[]>(() => [
 		{
-			title: "Dashboard",
+			title: "All Dashboards",
 			href: dashboardPath,
 			icon: LayoutDashboard,
 			variant: pathname === dashboardPath ? "default" : "ghost",

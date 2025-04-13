@@ -79,7 +79,7 @@ export async function getRooms(options: RoomQueryOptions = {}): Promise<Room[]> 
 
 		// Apply filters
 		if (options.houseId) {
-			query = query.eq('sanity_house_id', options.houseId);
+			query = query.eq('house_id', options.houseId);
 		}
 
 		if (options.status && options.status !== 'all') {
@@ -160,6 +160,7 @@ export async function getAvailableRooms(houseId?: string): Promise<Room[]> {
 
 /**
  * Get rooms by house
+ * @param houseId Supabase UUID of the house (house.id)
  */
 export async function getRoomsByHouse(houseId: string): Promise<Room[]> {
 	return getRooms({ houseId });

@@ -222,7 +222,7 @@ export default function SuperAdminPage() {
 												<span className="text-muted-foreground">/{house.sanityHouse?.capacity || 0}</span>
 											</div>
 											<Button variant="outline" size="sm" asChild>
-												<Link href={`/dashboard/${house.sanity_house_id}/admin`}>
+												<Link href={`/dashboard/${house.id}/admin`}>
 													Manage
 												</Link>
 											</Button>

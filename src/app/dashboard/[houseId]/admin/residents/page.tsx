@@ -1,3 +1,6 @@
+'use client';
+
+import { InviteResidentModal } from '@/components/admin/residents/InviteResidentModal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -28,86 +31,46 @@ import {
 	TableRow,
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getUsersByHouse } from '@/lib/api/users';
+import { UserProfile } from '@/lib/types';
 import { Download, Filter, MoreHorizontal, UserPlus } from 'lucide-react';
-
-// Mock data
-const RESIDENTS = [
-	{
-		id: '1',
-		name: 'Emma Thompson',
-		email: 'emma@example.com',
-		room: '101',
-		moveInDate: '2023-05-15',
-		status: 'active',
-		company: 'AI Startup Co.',
-		field: 'AI',
-	},
-	{
-		id: '2',
-		name: 'James Wilson',
-		email: 'james@example.com',
-		room: '102',
-		moveInDate: '2023-06-01',
-		status: 'active',
-		company: 'Web3 Solutions',
-		field: 'Web3',
-	},
-	{
-		id: '3',
-		name: 'Sophia Garcia',
-		email: 'sophia@example.com',
-		room: '203',
-		moveInDate: '2023-04-10',
-		status: 'active',
-		company: 'Blockchain Ventures',
-		field: 'Web3',
-	},
-	{
-		id: '4',
-		name: 'Michael Chen',
-		email: 'michael@example.com',
-		room: '205',
-		moveInDate: '2023-07-05',
-		status: 'active',
-		company: 'Neural Networks Inc.',
-		field: 'AI',
-	},
-	{
-		id: '5',
-		name: 'Lisa Johnson',
-		email: 'lisa@example.com',
-		room: null,
-		moveInDate: '2023-09-01',
-		status: 'pending',
-		company: 'DeFi Protocol',
-		field: 'Web3',
-	},
-];
-
-const APPLICANTS = [
-	{
-		id: '10',
-		name: 'Alex Rodriguez',
-		email: 'alex@example.com',
-		preferredRoom: 'Any',
-		applicationDate: '2023-08-10',
-		status: 'interview',
-		company: 'GenAI Studio',
-		field: 'AI',
-	},
-	{
-		id: '11',
-		name: 'Taylor Kim',
-		email: 'taylor@example.com',
-		preferredRoom: 'Single',
-		applicationDate: '2023-08-15',
-		status: 'review',
-		company: 'Smart Contract Labs',
-		field: 'Web3',
-	},
-];
+import { useEffect, useState } from 'react';
 
 export default function ResidentsManagement({ params }: { params: { houseId: string; }; }) {
+	const [inviteModalOpen, setInviteModalOpen] = useState(false);
+	const [residents, setResidents] = useState<UserProfile[]>([]);
+	const [isLoading, setIsLoading] = useState(true);
+
+	// Fetch residents when the component mounts
+	useEffect(() => {
+		async function fetchResidents() {
+			try {
+				setIsLoading(true);
+				const houseResidents = await getUsersByHouse(params.houseId);
+				setResidents(houseResidents);
+			} catch (error) {
+				console.error('Error fetching residents:', error);
+			} finally {
+				setIsLoading(false);
+			}
+		}
+
+		fetchResidents();
+	}, [params.houseId]);
+
+	// Function to refresh residents after successful invitation
+	const refreshResidents = async () => {
+		try {
+			setIsLoading(true);
+			const houseResidents = await getUsersByHouse(params.houseId);
+			setResidents(houseResidents);
+		} catch (error) {
+			console.error('Error refreshing residents:', error);
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
@@ -117,7 +80,7 @@ export default function ResidentsManagement({ params }: { params: { houseId: str
 						<Download className="mr-2 h-4 w-4" />
 						Export
 					</Button>
-					<Button>
+					<Button onClick={() => setInviteModalOpen(true)}>
 						<UserPlus className="mr-2 h-4 w-4" />
 						Add Resident
 					</Button>
@@ -180,44 +143,67 @@ export default function ResidentsManagement({ params }: { params: { houseId: str
 								<TableHeader>
 									<TableRow>
 										<TableHead>Name</TableHead>
+										<TableHead>Email</TableHead>
 										<TableHead>Room</TableHead>
 										<TableHead>Move-in Date</TableHead>
 										<TableHead>Company/Project</TableHead>
-										<TableHead>Field</TableHead>
 										<TableHead>Status</TableHead>
 										<TableHead></TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
-									{RESIDENTS.filter(r => r.status === 'active').map((resident) => (
-										<TableRow key={resident.id}>
-											<TableCell className="font-medium">{resident.name}</TableCell>
-											<TableCell>{resident.room}</TableCell>
-											<TableCell>{resident.moveInDate}</TableCell>
-											<TableCell>{resident.company}</TableCell>
-											<TableCell>{resident.field}</TableCell>
-											<TableCell>
-												<Badge variant="default" className="bg-green-500">Active</Badge>
-											</TableCell>
-											<TableCell>
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" className="h-8 w-8 p-0">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuLabel>Actions</DropdownMenuLabel>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem>View Profile</DropdownMenuItem>
-														<DropdownMenuItem>Edit Details</DropdownMenuItem>
-														<DropdownMenuItem>Change Room</DropdownMenuItem>
-														<DropdownMenuItem>Process Move-out</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
+									{isLoading ? (
+										<TableRow>
+											<TableCell colSpan={7} className="text-center py-10">
+												Loading residents...
 											</TableCell>
 										</TableRow>
-									))}
+									) : residents.length > 0 ? (
+										residents.map((resident) => (
+											<TableRow key={resident.id}>
+												<TableCell className="font-medium">
+													{resident.sanityPerson?.name || resident.email?.split('@')[0]}
+												</TableCell>
+												<TableCell>{resident.email}</TableCell>
+												<TableCell>
+													{/* Room will be managed separately in the future */}
+													Not Assigned
+												</TableCell>
+												<TableCell>
+													{resident.sanityPerson?.startDate ?
+														new Date(resident.sanityPerson.startDate).toLocaleDateString() :
+														"Not specified"}
+												</TableCell>
+												<TableCell>{resident.sanityPerson?.company || "Not specified"}</TableCell>
+												<TableCell>
+													<Badge variant="default" className="bg-green-500">Active</Badge>
+												</TableCell>
+												<TableCell>
+													<DropdownMenu>
+														<DropdownMenuTrigger asChild>
+															<Button variant="ghost" className="h-8 w-8 p-0">
+																<MoreHorizontal className="h-4 w-4" />
+															</Button>
+														</DropdownMenuTrigger>
+														<DropdownMenuContent align="end">
+															<DropdownMenuLabel>Actions</DropdownMenuLabel>
+															<DropdownMenuSeparator />
+															<DropdownMenuItem>View Profile</DropdownMenuItem>
+															<DropdownMenuItem>Edit Details</DropdownMenuItem>
+															<DropdownMenuItem>Change Room</DropdownMenuItem>
+															<DropdownMenuItem>Process Move-out</DropdownMenuItem>
+														</DropdownMenuContent>
+													</DropdownMenu>
+												</TableCell>
+											</TableRow>
+										))
+									) : (
+										<TableRow>
+											<TableCell colSpan={7} className="text-center py-10">
+												No residents found. Invite some residents to get started.
+											</TableCell>
+										</TableRow>
+									)}
 								</TableBody>
 							</Table>
 						</CardContent>
@@ -233,50 +219,9 @@ export default function ResidentsManagement({ params }: { params: { houseId: str
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Name</TableHead>
-										<TableHead>Assigned Room</TableHead>
-										<TableHead>Expected Move-in</TableHead>
-										<TableHead>Company/Project</TableHead>
-										<TableHead>Field</TableHead>
-										<TableHead>Status</TableHead>
-										<TableHead></TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{RESIDENTS.filter(r => r.status === 'pending').map((resident) => (
-										<TableRow key={resident.id}>
-											<TableCell className="font-medium">{resident.name}</TableCell>
-											<TableCell>{resident.room || "Not Assigned"}</TableCell>
-											<TableCell>{resident.moveInDate}</TableCell>
-											<TableCell>{resident.company}</TableCell>
-											<TableCell>{resident.field}</TableCell>
-											<TableCell>
-												<Badge variant="outline">Pending</Badge>
-											</TableCell>
-											<TableCell>
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" className="h-8 w-8 p-0">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuLabel>Actions</DropdownMenuLabel>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem>Assign Room</DropdownMenuItem>
-														<DropdownMenuItem>Process Check-in</DropdownMenuItem>
-														<DropdownMenuItem>Edit Details</DropdownMenuItem>
-														<DropdownMenuItem>Send Welcome Email</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
+							<div className="flex h-[300px] items-center justify-center border rounded-md">
+								<p className="text-sm text-muted-foreground">Coming soon</p>
+							</div>
 						</CardContent>
 					</Card>
 				</TabsContent>
@@ -290,55 +235,9 @@ export default function ResidentsManagement({ params }: { params: { houseId: str
 							</CardDescription>
 						</CardHeader>
 						<CardContent>
-							<Table>
-								<TableHeader>
-									<TableRow>
-										<TableHead>Name</TableHead>
-										<TableHead>Preferred Room</TableHead>
-										<TableHead>Application Date</TableHead>
-										<TableHead>Company/Project</TableHead>
-										<TableHead>Field</TableHead>
-										<TableHead>Status</TableHead>
-										<TableHead></TableHead>
-									</TableRow>
-								</TableHeader>
-								<TableBody>
-									{APPLICANTS.map((applicant) => (
-										<TableRow key={applicant.id}>
-											<TableCell className="font-medium">{applicant.name}</TableCell>
-											<TableCell>{applicant.preferredRoom}</TableCell>
-											<TableCell>{applicant.applicationDate}</TableCell>
-											<TableCell>{applicant.company}</TableCell>
-											<TableCell>{applicant.field}</TableCell>
-											<TableCell>
-												<Badge
-													variant={applicant.status === 'interview' ? 'default' : 'secondary'}
-													className={applicant.status === 'interview' ? 'bg-blue-500' : ''}
-												>
-													{applicant.status === 'interview' ? 'Interview Scheduled' : 'Under Review'}
-												</Badge>
-											</TableCell>
-											<TableCell>
-												<DropdownMenu>
-													<DropdownMenuTrigger asChild>
-														<Button variant="ghost" className="h-8 w-8 p-0">
-															<MoreHorizontal className="h-4 w-4" />
-														</Button>
-													</DropdownMenuTrigger>
-													<DropdownMenuContent align="end">
-														<DropdownMenuLabel>Actions</DropdownMenuLabel>
-														<DropdownMenuSeparator />
-														<DropdownMenuItem>View Application</DropdownMenuItem>
-														<DropdownMenuItem>Schedule Interview</DropdownMenuItem>
-														<DropdownMenuItem>Approve</DropdownMenuItem>
-														<DropdownMenuItem>Reject</DropdownMenuItem>
-													</DropdownMenuContent>
-												</DropdownMenu>
-											</TableCell>
-										</TableRow>
-									))}
-								</TableBody>
-							</Table>
+							<div className="flex h-[300px] items-center justify-center border rounded-md">
+								<p className="text-sm text-muted-foreground">Coming soon</p>
+							</div>
 						</CardContent>
 					</Card>
 				</TabsContent>
@@ -353,12 +252,20 @@ export default function ResidentsManagement({ params }: { params: { houseId: str
 						</CardHeader>
 						<CardContent>
 							<div className="flex h-[300px] items-center justify-center border rounded-md">
-								<p className="text-sm text-muted-foreground">No alumni data available yet</p>
+								<p className="text-sm text-muted-foreground">Coming soon</p>
 							</div>
 						</CardContent>
 					</Card>
 				</TabsContent>
 			</Tabs>
+
+			{/* Invite Resident Modal */}
+			<InviteResidentModal
+				open={inviteModalOpen}
+				onOpenChange={setInviteModalOpen}
+				houseId={params.houseId}
+				onSuccess={refreshResidents}
+			/>
 		</div>
 	);
 } 

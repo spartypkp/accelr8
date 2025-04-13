@@ -24,7 +24,7 @@ export interface SupabaseExtendedUser extends SupabaseAuthUser {
 
 export interface UserProfile extends SupabaseExtendedUser {
 	// Public profile data (from SanityPerson)
-	sanityPerson?: SanityPerson;
+	sanityPerson?: Partial<SanityPerson>;
 }
 
 // House operations from Supabase

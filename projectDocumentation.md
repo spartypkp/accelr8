@@ -46,8 +46,14 @@ The system implements a unique dual-database architecture to leverage the streng
 
 #### Data Integration Strategy
 - **Type Extension Pattern**: TypeScript interfaces extend base types from each source
-- **Cross-Database References**: Consistent ID linking between systems
+- **Cross-Database References**: Consistent ID linking between systems using Supabase UUIDs as primary identifiers
 - **Normalized Properties**: Consistent naming conventions across systems
+
+#### ID Standardization
+- **Primary Identifier**: Supabase UUIDs are used as the standard ID for all entities across the system
+- **Cross-Reference**: Supabase entities reference Sanity content via `sanity_*_id` fields
+- **Route Parameters**: All dynamic routes use Supabase UUIDs (e.g., `/dashboard/[houseId]/admin`)
+- **Slug Translation**: Functions to convert between SEO-friendly slugs and UUIDs for public-facing pages
 
 ## User Roles and Authorization
 
@@ -121,7 +127,7 @@ The application uses Next.js App Router with a clear routing structure:
 / - Public homepage
 /story - About Accelr8 and mission
 /houses - Public houses listing
-/houses/[houseId] - Public house detail page
+/houses/[houseId] - Public house detail page (uses Supabase UUID)
 /apply - Application form
 /events - Public events
 /login, /register, /forgot-password - Auth pages
@@ -131,10 +137,10 @@ The application uses Next.js App Router with a clear routing structure:
 /dashboard/settings - User account settings
 /dashboard/applications - Application status (for applicants)
 
-/dashboard/[houseId]/resident - House resident view
+/dashboard/[houseId]/resident - House resident view (UUID-based)
 /dashboard/[houseId]/resident/* - Resident sub-pages
 
-/dashboard/[houseId]/admin - House admin dashboard 
+/dashboard/[houseId]/admin - House admin dashboard (UUID-based)
 /dashboard/[houseId]/admin/* - Admin sub-pages
 
 /dashboard/superAdmin - Organization administration
@@ -148,6 +154,7 @@ The dashboard interface is built with a consistent structure:
 1. **Shell**: The outer container with navigation
 2. **Sidebar**: Role-specific navigation menu
 3. **Main Content**: Dynamic page content
+4. **Context Providers**: House and user context providers supply data and state management
 
 ### Dashboard Navigation
 
@@ -155,6 +162,12 @@ Navigation is dynamically generated based on:
 1. User's role
 2. Access to specific houses
 3. Current context (admin vs. resident view)
+
+### Data Flow
+1. Route parameters like `[houseId]` use Supabase UUIDs
+2. The `HouseContext` provider fetches data based on the UUID
+3. Both Supabase operational data and linked Sanity content are merged
+4. Components consume data through the `useHouse()` hook
 
 ## Implementations Complete
 
@@ -276,7 +289,9 @@ Navigation is dynamically generated based on:
 ### Phase 2: Core Functionality (In Progress)
 - ✅ Build house details pages
 - ✅ Create profile and settings pages
-- 🔄 Implement house-specific dashboards
+- ✅ Implement house-specific dashboards
+- ✅ Standardize ID system using Supabase UUIDs
+- ✅ Develop HouseContext provider and hook
 - 🔄 Develop application management system
 
 ### Phase 3: Advanced Features (Upcoming)
@@ -334,15 +349,19 @@ if (isSuperAdminRoute) {
 
 ### Cross-Database Integration
 **Challenge**: Maintaining consistency between Sanity and Supabase data.
-**Solution**: Implemented type extension pattern with strict TypeScript interfaces.
+**Solution**: Implemented type extension pattern with strict TypeScript interfaces and standardized on Supabase UUIDs as primary identifiers.
 
 ### House-Specific Authorization
 **Challenge**: Creating a flexible system for house-specific access.
-**Solution**: Database tables track user-house relationships with middleware verification.
+**Solution**: Database tables track user-house relationships with middleware verification using Supabase UUIDs.
 
 ### Dynamic Navigation
 **Challenge**: Building navigation that adapts to user roles and permissions.
 **Solution**: Context-aware sidebar that renders different items based on role and route.
+
+### ID Standardization
+**Challenge**: Managing dual-database architecture with different ID systems.
+**Solution**: Used Supabase UUIDs as primary identifiers and implemented database references with conversion utilities.
 
 ### Performance Optimization
 **Challenge**: Managing data fetching from dual sources without excessive requests.
@@ -383,7 +402,12 @@ if (isSuperAdminRoute) {
 - Handle loading and error states consistently
 
 ### API Development
-- Create separate API routes for data operations
-- Implement proper authentication and validation
-- Use server actions for form submissions
+- Create server-side API functions in `/lib/api/*`
+- Standardize on Supabase UUIDs for all entity identification
+- Use helper functions for cross-database operations
+
+### Context Usage
+- Use contexts for global state (User, House)
+- Use the HouseContext provider for house-specific data
+- Access house data via useHouse() hook throughout the application
 

@@ -27,6 +27,7 @@ export type UserContextType = {
 	signUp: (email: string, password: string) => Promise<{ error: Error | null; }>;
 	signOut: () => Promise<void>;
 	resetPassword: (email: string) => Promise<{ error: Error | null; }>;
+	updatePassword: (password: string) => Promise<{ error: Error | null; }>;
 	updateUserProfile: (data: Partial<UserProfile>) => Promise<{ error: Error | null; }>;
 
 	// Computed properties
@@ -48,6 +49,7 @@ const UserContext = createContext<UserContextType>({
 	signUp: async () => ({ error: new Error('Not implemented') }),
 	signOut: async () => { },
 	resetPassword: async () => ({ error: new Error('Not implemented') }),
+	updatePassword: async () => ({ error: new Error('Not implemented') }),
 	updateUserProfile: async () => ({ error: new Error('Not implemented') }),
 	isAdmin: false,
 	isSuperAdmin: false,
@@ -318,6 +320,22 @@ export function UserProvider({
 		}
 	};
 
+	const updatePassword = async (password: string) => {
+		setError(null);
+		try {
+			const { error } = await supabase.auth.updateUser({ password });
+			if (error) {
+				setError(error.message);
+				return { error };
+			}
+			return { error: null };
+		} catch (err) {
+			const error = err as Error;
+			setError(error.message);
+			return { error };
+		}
+	};
+
 	return (
 		<UserContext.Provider
 			value={{
@@ -331,6 +349,7 @@ export function UserProvider({
 				signUp,
 				signOut,
 				resetPassword,
+				updatePassword,
 				updateUserProfile,
 				isAdmin,
 				isSuperAdmin,

@@ -314,14 +314,36 @@ export async function getApplicationWithStatusInfo(id: string) {
 
 /**
  * Get a house ID from a slug
+ * Converts a Sanity slug to a Supabase UUID
  */
 export async function getHouseIdFromSlug(slug: string): Promise<string> {
 	try {
-		// This is a placeholder implementation
-		// In a real application, this would query the database or CMS
+		const sanityClient = createSanityClient();
+		const supabase = await createClient();
 
-		// For now, just return the slug as if it were an ID
-		return slug;
+		// 1. First find the house in Sanity by slug
+		const sanityHouse = await sanityClient.fetch(
+			`*[_type == "house" && slug.current == $slug][0]{ _id }`,
+			{ slug }
+		);
+
+		if (!sanityHouse || !sanityHouse._id) {
+			throw new ApiError('House not found with the provided slug', 404);
+		}
+
+		// 2. Now find the corresponding house_operations in Supabase
+		const { data: houseData, error } = await supabase
+			.from('house_operations')
+			.select('id')
+			.eq('sanity_house_id', sanityHouse._id)
+			.single();
+
+		if (error || !houseData) {
+			throw new ApiError('House not found in operations database', 404);
+		}
+
+		// 3. Return the Supabase UUID
+		return houseData.id;
 	} catch (error) {
 		console.error(`Error fetching house ID for slug ${slug}:`, error);
 		throw new ApiError('Failed to find house for the given location', 400);

@@ -25,6 +25,7 @@ import { notFound } from "next/navigation";
 
 // This is used to generate static metadata for each house page
 export async function generateMetadata({ params }: { params: { houseId: string; }; }): Promise<Metadata> {
+	// houseId from params is now treated as Supabase UUID
 	const house = await getHouse(params.houseId);
 
 	if (!house) {
@@ -40,13 +41,14 @@ export async function generateMetadata({ params }: { params: { houseId: string; 
 }
 
 export default async function HouseDetailsPage({ params }: { params: { houseId: string; }; }) {
+	// houseId from params is now treated as Supabase UUID
 	const house = await getHouse(params.houseId);
 
 	if (!house) {
 		notFound();
 	}
 
-	// Get rooms for this house
+	// Get rooms for this house (using the Supabase UUID)
 	const rooms = await getRoomsByHouse(params.houseId);
 
 	// Count available and occupied rooms
