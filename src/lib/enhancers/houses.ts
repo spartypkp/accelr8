@@ -103,11 +103,27 @@ export function createHouseOperationsFromInput(
 		wifi_network?: string;
 		wifi_password?: string;
 		access_code?: string;
+		emergency_contacts?: Record<string, any>;
+		maintenance_contacts?: Record<string, any>;
+		cleaning_schedule?: Record<string, any>;
+		operational_notes?: string;
+		last_inspection_date?: string;
+		// Allow other properties but don't use them
+		[key: string]: any;
 	}
 ): Partial<SupabaseHouseOperations> {
+	// Extract only the fields that exist in the house_operations table
 	return {
-		...data,
+		sanity_house_id: data.sanity_house_id,
 		status: data.status || 'planned',
-		current_occupancy: data.current_occupancy || 0
+		current_occupancy: data.current_occupancy || 0,
+		wifi_network: data.wifi_network,
+		wifi_password: data.wifi_password,
+		access_code: data.access_code,
+		emergency_contacts: data.emergency_contacts,
+		maintenance_contacts: data.maintenance_contacts,
+		cleaning_schedule: data.cleaning_schedule,
+		operational_notes: data.operational_notes,
+		last_inspection_date: data.last_inspection_date
 	};
 } 

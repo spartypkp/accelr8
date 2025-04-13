@@ -1,7 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
 	AlertTriangle,
 	Bell,
@@ -11,6 +10,7 @@ import {
 	DollarSign,
 	HomeIcon,
 	LineChart,
+	Settings,
 	Users,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -90,222 +90,116 @@ export default function HouseAdminDashboard({ params }: { params: { houseId: str
 				</Card>
 			</div>
 
-			<Tabs defaultValue="overview" className="space-y-4">
-				<TabsList>
-					<TabsTrigger value="overview">Overview</TabsTrigger>
-					<TabsTrigger value="residents">Residents</TabsTrigger>
-					<TabsTrigger value="operations">Operations</TabsTrigger>
-					<TabsTrigger value="events">Events</TabsTrigger>
-				</TabsList>
 
-				<TabsContent value="overview" className="space-y-4">
-					<div className="grid gap-4 md:grid-cols-2">
-						<Card className="col-span-1">
-							<CardHeader>
-								<CardTitle>Recent Activity</CardTitle>
-								<CardDescription>
-									Latest events and actions in your house
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="space-y-4">
-									<div className="flex items-start gap-4">
-										<div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
-											<Users className="h-4 w-4" />
-										</div>
-										<div>
-											<p className="font-medium">New resident check-in</p>
-											<p className="text-sm text-muted-foreground">Sarah Johnson moved in to Room 204</p>
-											<p className="text-xs text-muted-foreground">2 hours ago</p>
-										</div>
-									</div>
-
-									<div className="flex items-start gap-4">
-										<div className="rounded-full bg-yellow-100 p-2 dark:bg-yellow-900">
-											<AlertTriangle className="h-4 w-4" />
-										</div>
-										<div>
-											<p className="font-medium">Maintenance request submitted</p>
-											<p className="text-sm text-muted-foreground">Kitchen sink leaking - high priority</p>
-											<p className="text-xs text-muted-foreground">5 hours ago</p>
-										</div>
-									</div>
-
-									<div className="flex items-start gap-4">
-										<div className="rounded-full bg-green-100 p-2 dark:bg-green-900">
-											<Calendar className="h-4 w-4" />
-										</div>
-										<div>
-											<p className="font-medium">New event created</p>
-											<p className="text-sm text-muted-foreground">AI Hackathon scheduled for next weekend</p>
-											<p className="text-xs text-muted-foreground">Yesterday</p>
-										</div>
-									</div>
+			<div className="grid gap-4 md:grid-cols-2">
+				<Card className="col-span-1">
+					<CardHeader>
+						<CardTitle>Recent Activity</CardTitle>
+						<CardDescription>
+							Latest events and actions in your house
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="space-y-4">
+							<div className="flex items-start gap-4">
+								<div className="rounded-full bg-blue-100 p-2 dark:bg-blue-900">
+									<Users className="h-4 w-4" />
 								</div>
-							</CardContent>
-						</Card>
-
-						<Card className="col-span-1">
-							<CardHeader>
-								<CardTitle>Quick Actions</CardTitle>
-								<CardDescription>
-									Common management tasks
-								</CardDescription>
-							</CardHeader>
-							<CardContent>
-								<div className="grid grid-cols-2 gap-4">
-									<Link href={`/dashboard/${houseId}/admin/residents`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<Users className="mr-2 h-4 w-4" />
-											Manage Residents
-										</Button>
-									</Link>
-
-									<Link href={`/dashboard/${houseId}/admin/operations`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<Building className="mr-2 h-4 w-4" />
-											Operations
-										</Button>
-									</Link>
-
-									<Link href={`/dashboard/${houseId}/admin/events`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<Calendar className="mr-2 h-4 w-4" />
-											Events
-										</Button>
-									</Link>
-
-									<Link href={`/dashboard/${houseId}/admin/analytics`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<LineChart className="mr-2 h-4 w-4" />
-											Analytics
-										</Button>
-									</Link>
-
-									<Link href={`/dashboard/${houseId}/admin/finances`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<DollarSign className="mr-2 h-4 w-4" />
-											Finances
-										</Button>
-									</Link>
-
-									<Link href={`/dashboard/${houseId}/admin/applications`} className="no-underline">
-										<Button variant="outline" className="w-full justify-start">
-											<ClipboardList className="mr-2 h-4 w-4" />
-											Applications
-										</Button>
-									</Link>
-								</div>
-							</CardContent>
-						</Card>
-					</div>
-
-					<Card>
-						<CardHeader>
-							<CardTitle>House Health</CardTitle>
-							<CardDescription>
-								Key performance indicators for your house
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<div className="grid gap-4 md:grid-cols-3">
-								<div className="space-y-2">
-									<p className="text-sm font-medium">Resident Satisfaction</p>
-									<div className="flex items-center">
-										<div className="w-full">
-											<Progress value={87} className="h-2" />
-										</div>
-										<span className="ml-2 text-sm font-medium">87%</span>
-									</div>
-								</div>
-
-								<div className="space-y-2">
-									<p className="text-sm font-medium">Event Participation</p>
-									<div className="flex items-center">
-										<div className="w-full">
-											<Progress value={72} className="h-2" />
-										</div>
-										<span className="ml-2 text-sm font-medium">72%</span>
-									</div>
-								</div>
-
-								<div className="space-y-2">
-									<p className="text-sm font-medium">Community Engagement</p>
-									<div className="flex items-center">
-										<div className="w-full">
-											<Progress value={93} className="h-2" />
-										</div>
-										<span className="ml-2 text-sm font-medium">93%</span>
-									</div>
+								<div>
+									<p className="font-medium">New resident check-in</p>
+									<p className="text-sm text-muted-foreground">Sarah Johnson moved in to Room 204</p>
+									<p className="text-xs text-muted-foreground">2 hours ago</p>
 								</div>
 							</div>
-						</CardContent>
-					</Card>
-				</TabsContent>
 
-				<TabsContent value="residents" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle>Resident Overview</CardTitle>
-							<CardDescription>
-								View and manage current residents
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">
-								Visit the full residents management section to view detailed information, handle check-ins/outs, and manage room assignments.
-							</p>
-							<div className="mt-4">
-								<Link href={`/dashboard/${houseId}/admin/residents`}>
-									<Button>View All Residents</Button>
-								</Link>
+							<div className="flex items-start gap-4">
+								<div className="rounded-full bg-yellow-100 p-2 dark:bg-yellow-900">
+									<AlertTriangle className="h-4 w-4" />
+								</div>
+								<div>
+									<p className="font-medium">Maintenance request submitted</p>
+									<p className="text-sm text-muted-foreground">Kitchen sink leaking - high priority</p>
+									<p className="text-xs text-muted-foreground">5 hours ago</p>
+								</div>
 							</div>
-						</CardContent>
-					</Card>
-				</TabsContent>
 
-				<TabsContent value="operations" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle>Operations Overview</CardTitle>
-							<CardDescription>
-								Maintenance, cleaning, and facilities management
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">
-								Visit the full operations section to manage maintenance requests, cleaning schedules, and house inventory.
-							</p>
-							<div className="mt-4">
-								<Link href={`/dashboard/${houseId}/admin/operations`}>
-									<Button>View Operations</Button>
-								</Link>
+							<div className="flex items-start gap-4">
+								<div className="rounded-full bg-green-100 p-2 dark:bg-green-900">
+									<Calendar className="h-4 w-4" />
+								</div>
+								<div>
+									<p className="font-medium">New event created</p>
+									<p className="text-sm text-muted-foreground">AI Hackathon scheduled for next weekend</p>
+									<p className="text-xs text-muted-foreground">Yesterday</p>
+								</div>
 							</div>
-						</CardContent>
-					</Card>
-				</TabsContent>
+						</div>
+					</CardContent>
+				</Card>
 
-				<TabsContent value="events" className="space-y-4">
-					<Card>
-						<CardHeader>
-							<CardTitle>Event Overview</CardTitle>
-							<CardDescription>
-								Manage upcoming and past events
-							</CardDescription>
-						</CardHeader>
-						<CardContent>
-							<p className="text-sm text-muted-foreground">
-								Visit the full events section to create events, track RSVPs, and manage event resources.
-							</p>
-							<div className="mt-4">
-								<Link href={`/dashboard/${houseId}/admin/events`}>
-									<Button>Manage Events</Button>
-								</Link>
-							</div>
-						</CardContent>
-					</Card>
-				</TabsContent>
-			</Tabs>
+				<Card className="col-span-1">
+					<CardHeader>
+						<CardTitle>Quick Actions</CardTitle>
+						<CardDescription>
+							Common management tasks
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<div className="grid grid-cols-2 gap-4">
+							<Link href={`/dashboard/${houseId}/admin/house-details`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start text-primary border-primary">
+									<Settings className="mr-2 h-4 w-4" />
+									House Details
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/residents`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<Users className="mr-2 h-4 w-4" />
+									Manage Residents
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/operations`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<Building className="mr-2 h-4 w-4" />
+									Operations
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/events`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<Calendar className="mr-2 h-4 w-4" />
+									Events
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/analytics`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<LineChart className="mr-2 h-4 w-4" />
+									Analytics
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/finances`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<DollarSign className="mr-2 h-4 w-4" />
+									Finances
+								</Button>
+							</Link>
+
+							<Link href={`/dashboard/${houseId}/admin/applications`} className="no-underline">
+								<Button variant="outline" className="w-full justify-start">
+									<ClipboardList className="mr-2 h-4 w-4" />
+									Applications
+								</Button>
+							</Link>
+						</div>
+					</CardContent>
+				</Card>
+			</div>
+
+
 		</div>
 	);
 }

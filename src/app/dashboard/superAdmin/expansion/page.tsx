@@ -27,7 +27,6 @@ const formSchema = z.object({
 
 	// Status and Operations
 	status: z.enum(["open", "planned", "closed"]),
-	active: z.boolean().default(true),
 	current_occupancy: z.number().int().min(0),
 	capacity: z.number().int().min(1).optional(),
 
@@ -61,7 +60,6 @@ export default function HouseExpansionPage() {
 			name: "",
 			slug: "",
 			status: "planned",
-			active: true,
 			current_occupancy: 0,
 			capacity: 10,
 			shortDescription: "",
@@ -120,7 +118,6 @@ export default function HouseExpansionPage() {
 				access_code: values.access_code,
 				// Additional data for Sanity
 				slug: values.slug,
-				active: values.active,
 				capacity: values.capacity,
 				shortDescription: values.shortDescription,
 				location: locationData,
@@ -261,34 +258,6 @@ export default function HouseExpansionPage() {
 														</FormControl>
 														<FormDescription>
 															Maximum number of residents.
-														</FormDescription>
-														<FormMessage />
-													</FormItem>
-												)}
-											/>
-
-											<FormField
-												control={form.control}
-												name="active"
-												render={({ field }) => (
-													<FormItem>
-														<FormLabel>Visibility</FormLabel>
-														<Select
-															onValueChange={(value) => field.onChange(value === "true")}
-															defaultValue={field.value ? "true" : "false"}
-														>
-															<FormControl>
-																<SelectTrigger>
-																	<SelectValue placeholder="Select visibility" />
-																</SelectTrigger>
-															</FormControl>
-															<SelectContent>
-																<SelectItem value="true">Visible on Website</SelectItem>
-																<SelectItem value="false">Hidden</SelectItem>
-															</SelectContent>
-														</Select>
-														<FormDescription>
-															Controls visibility on the public website.
 														</FormDescription>
 														<FormMessage />
 													</FormItem>

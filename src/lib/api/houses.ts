@@ -19,7 +19,6 @@ import { ApiError } from './shared/error';
 export type HouseInput = {
 	name?: string;
 	slug?: string;
-	active?: boolean;
 	shortDescription?: string;
 	capacity?: number;
 	location?: {
@@ -90,11 +89,13 @@ export async function getHouses(options: HouseQueryOptions = {}): Promise<House[
 		// Build Sanity query based on options
 		let query = '*[_type == "house"';
 
-		// Handle active filter
+		// Handle status filter
 		if (options.status === 'active') {
-			query += ' && active == true';
+			// Use status "open" instead of active
+			query += ' && defined(status) && status == "open"';
 		} else if (options.status === 'inactive') {
-			query += ' && (active == false || !defined(active))';
+			// Use status "planned" or "closed" instead of inactive
+			query += ' && defined(status) && (status == "planned" || status == "closed")';
 		}
 
 		// Handle location filter
@@ -152,6 +153,7 @@ export async function getHouses(options: HouseQueryOptions = {}): Promise<House[
 
 /**
  * Get active houses only
+ * This returns houses with status 'open'
  */
 export async function getActiveHouses(): Promise<House[]> {
 	return getHouses({ status: 'active' });
@@ -172,7 +174,9 @@ export async function createHouse(data: HouseInput): Promise<House | null> {
 		const sanityData: any = {
 			_type: 'house',
 			name: data.name || 'New House',
-			active: data.active !== undefined ? data.active : true
+			// active: data.active !== undefined ? data.active : true - removed
+			// Add status value to Sanity doc as well, using the one from our input
+			status: data.status || 'planned'
 		};
 
 		// Add optional fields if provided
