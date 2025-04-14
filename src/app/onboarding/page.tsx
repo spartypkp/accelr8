@@ -1,5 +1,6 @@
 'use client';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -7,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useUser } from '@/hooks/UserContext';
+import { claimInvitation } from '@/lib/api/users';
 import { Person as SanityPerson } from '@/lib/sanity/sanity.types';
-import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 // Password validation helper
@@ -44,6 +47,9 @@ const validatePassword = (password: string): { valid: boolean; message: string; 
 export default function OnboardingPage() {
 	const { userProfile, isLoading, updateUserProfile, updatePassword } = useUser();
 	const router = useRouter();
+	const searchParams = useSearchParams();
+	const supabase = createClient();
+
 	const [step, setStep] = useState('welcome');
 	const [formData, setFormData] = useState({
 		name: '',
@@ -58,6 +64,57 @@ export default function OnboardingPage() {
 	});
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState('');
+	const [invitationData, setInvitationData] = useState<any>(null);
+	const [processingInvitation, setProcessingInvitation] = useState(false);
+
+	// Check for invitation parameters in the URL
+	useEffect(() => {
+		const checkForInvitation = async () => {
+			// Magic link authentication will have a 'code' parameter
+			const code = searchParams.get('code');
+			if (!code) return;
+
+			setProcessingInvitation(true);
+			try {
+				// Exchange the code for a session
+				const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+				if (error) {
+					setError(`Invalid or expired invitation link: ${error.message}`);
+					return;
+				}
+
+				if (data.session) {
+					// Check if this is an invitation by looking at user metadata
+					const userMeta = data.session.user.user_metadata;
+					if (userMeta && userMeta.invitation) {
+						setInvitationData({
+							name: userMeta.name,
+							invited_by: userMeta.invited_by,
+							temp_password: userMeta.temp_password, // This is the inviteId
+							role: userMeta.role
+						});
+
+						// Pre-fill the form with the invitation data
+						setFormData(prev => ({
+							...prev,
+							name: userMeta.name || ''
+						}));
+
+						// Move directly to the password step for invitations
+						setStep('password');
+					}
+				}
+			} catch (err) {
+				console.error('Error processing invitation:', err);
+				setError('There was a problem processing your invitation link.');
+			} finally {
+				setProcessingInvitation(false);
+			}
+		};
+
+		checkForInvitation();
+	}, [searchParams, supabase.auth]);
 
 	// If user is already onboarded, redirect to dashboard
 	useEffect(() => {
@@ -69,7 +126,7 @@ export default function OnboardingPage() {
 		if (userProfile) {
 			setFormData(prev => ({
 				...prev,
-				name: userProfile.sanityPerson?.name || '',
+				name: userProfile.sanityPerson?.name || prev.name,
 				phone_number: userProfile.phone_number || '',
 				emergency_contact_name: userProfile.emergency_contact_name || '',
 				emergency_contact_phone: userProfile.emergency_contact_phone || '',
@@ -81,7 +138,7 @@ export default function OnboardingPage() {
 	}, [isLoading, userProfile, router]);
 
 	// If not authenticated or still loading, show a loading state
-	if (isLoading || !userProfile) {
+	if (isLoading || processingInvitation) {
 		return (
 			<div className="flex h-screen items-center justify-center">
 				<div className="text-center">
@@ -143,6 +200,15 @@ export default function OnboardingPage() {
 				onboarding_completed: true
 			});
 
+			// If this was an invitation, update its status to claimed
+			if (invitationData && userProfile) {
+				// The inviteId was passed as temp_password in the metadata
+				const inviteId = invitationData.temp_password;
+				if (inviteId) {
+					await claimInvitation(inviteId, userProfile.id);
+				}
+			}
+
 			// Redirect to dashboard
 			router.push('/dashboard');
 		} catch (err) {
@@ -156,6 +222,20 @@ export default function OnboardingPage() {
 	return (
 		<div className="container mx-auto py-10 max-w-3xl">
 			<h1 className="text-3xl font-bold text-center mb-8">Welcome to Accelr8!</h1>
+
+			{invitationData && (
+				<Alert className="mb-6">
+					<AlertTitle>You've been invited to Accelr8!</AlertTitle>
+					<AlertDescription>
+						<p className="mb-2">
+							You've been invited to join Accelr8 {invitationData.role && `as a ${invitationData.role}`} by {invitationData.invited_by}.
+						</p>
+						<p>
+							Please complete your profile setup to get started. You'll need to create a password and provide some basic information.
+						</p>
+					</AlertDescription>
+				</Alert>
+			)}
 
 			<Tabs defaultValue="welcome" value={step} onValueChange={setStep}>
 				<TabsList className="grid w-full grid-cols-3">
@@ -174,7 +254,10 @@ export default function OnboardingPage() {
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<p>
-								You've been invited to join Accelr8 as a resident. This onboarding process will help you set up your profile
+								{invitationData
+									? `You've been invited to join Accelr8 as a resident by ${invitationData.invited_by}.`
+									: "You've been invited to join Accelr8 as a resident."}
+								This onboarding process will help you set up your profile
 								and provide essential information needed for your stay.
 							</p>
 							<p>

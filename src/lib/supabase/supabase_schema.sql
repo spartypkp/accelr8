@@ -188,3 +188,60 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_application_interviews_updated_at BEFORE UPDATE ON application_interviews
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+
+CREATE TABLE IF NOT EXISTS user_invitations (
+    id UUID PRIMARY KEY,
+    email TEXT NOT NULL,
+    sanity_person_id TEXT,
+    invited_by UUID REFERENCES auth.users(id),
+    house_id UUID REFERENCES house_operations(id),
+    role TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    claimed_at TIMESTAMP WITH TIME ZONE,
+    user_id UUID REFERENCES auth.users(id)
+);
+
+-- Add RLS policies
+ALTER TABLE user_invitations ENABLE ROW LEVEL SECURITY;
+
+-- Allow admins to insert invitations
+CREATE POLICY "Admins can insert invitations" 
+ON user_invitations FOR INSERT 
+TO authenticated 
+USING (
+  (auth.jwt() ->> 'role') IN ('admin', 'super_admin')
+);
+
+-- Allow admins to view all invitations
+CREATE POLICY "Admins can view invitations" 
+ON user_invitations FOR SELECT 
+TO authenticated 
+USING (
+  (auth.jwt() ->> 'role') IN ('admin', 'super_admin')
+);
+
+-- Allow users to view their own invitations
+CREATE POLICY "Users can view their own invitations" 
+ON user_invitations FOR SELECT 
+TO authenticated 
+USING (
+  email = (SELECT email FROM auth.users WHERE id = auth.uid())
+);
+
+-- Allow admins to update invitations
+CREATE POLICY "Admins can update invitations" 
+ON user_invitations FOR UPDATE
+TO authenticated 
+USING (
+  (auth.jwt() ->> 'role') IN ('admin', 'super_admin')
+);
+
+-- Allow users to update their own invitations when claiming
+CREATE POLICY "Users can claim their invitations" 
+ON user_invitations FOR UPDATE
+TO authenticated 
+USING (
+  email = (SELECT email FROM auth.users WHERE id = auth.uid())
+);

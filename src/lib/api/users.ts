@@ -4,6 +4,7 @@ import {
 	enhanceUserWithSanityData
 } from '../enhancers/users';
 import { createSanityClient } from '../sanity/client';
+import { Person as SanityPerson } from '../sanity/sanity.types';
 import { createClient } from '../supabase/server';
 import { SupabaseAuthUser, SupabaseExtendedUser, UserProfile, UserRole } from '../types';
 import { sendResidentInvitation } from './emails';
@@ -310,7 +311,23 @@ export async function inviteResident(data: ResidentInviteData): Promise<UserProf
 			throw new ApiError('Email, name, and houseId are required', 400);
 		}
 
-		// 1. Create Sanity person document with minimal info
+		// First, we need to fetch the house operation record to get the Sanity house ID
+		const { data: houseData, error: houseError } = await supabase
+			.from('house_operations')
+			.select('sanity_house_id')
+			.eq('id', data.houseId)
+			.single();
+
+		if (houseError || !houseData) {
+			console.error('Error fetching house data:', houseError);
+			throw new ApiError(`House with ID ${data.houseId} not found`, 404);
+		}
+
+		if (!houseData.sanity_house_id) {
+			throw new ApiError(`House ${data.houseId} has no associated Sanity document`, 400);
+		}
+
+		// 1. Create Sanity person document with minimal info and the correct Sanity house ID
 		const sanityPerson = await sanityClient.create({
 			_type: 'person',
 			name: data.name,
@@ -318,56 +335,40 @@ export async function inviteResident(data: ResidentInviteData): Promise<UserProf
 			role: 'Resident', // Default role
 			isResident: true,
 			isTeamMember: false,
-			house: { _type: 'reference', _ref: data.houseId },
+			house: { _type: 'reference', _ref: houseData.sanity_house_id }, // Use Sanity ID, not Supabase UUID
 			startDate: data.moveInDate || new Date().toISOString().split('T')[0]
 		});
 
-		// 2. Generate random temporary password
-		const temporaryPassword = Math.random().toString(36).slice(-10) + Math.random().toString(36).slice(-10);
+		// 2. Create an invitation token ID to identify this invite
+		const inviteId = crypto.randomUUID();
 
-		// 3. Create Supabase auth user with resident role
-		const { data: authData, error: authError } = await supabase.auth.signUp({
-			email: data.email,
-			password: temporaryPassword,
-			options: {
-				data: {
-					role: 'resident',
-					onboarding_completed: false,
-					sanity_person_id: sanityPerson._id
-				}
-			}
-		});
+		// 3. Store invitation metadata in a separate table for verification later
+		const { error: inviteError } = await supabase
+			.from('user_invitations')
+			.insert({
+				id: inviteId,
+				email: data.email,
+				sanity_person_id: sanityPerson._id,
+				invited_by: currentUser.id,
+				house_id: data.houseId,
+				role: 'resident',
+				status: 'pending',
+				created_at: new Date().toISOString()
+			});
 
-		if (authError) throw authError;
-		if (!authData.user) {
-			throw new ApiError('Failed to create user', 500);
+		if (inviteError) {
+			throw new ApiError(`Failed to create invitation record: ${inviteError.message}`, 500);
 		}
 
-		// 4. Create extended user record with minimal info
-		const extendedUserData = {
-			id: authData.user.id,
-			email: data.email,
-			name: data.name,
-			role: 'resident' as UserRole,
-			onboarding_completed: false,
-			sanity_person_id: sanityPerson._id
-		};
-
-		const { error: extendedError } = await supabase
-			.from('accelr8_users')
-			.insert(extendedUserData);
-
-		if (extendedError) throw extendedError;
-
-		// 5. Send invitation email using Supabase's email service
-		// Get inviter's name
+		// 4. Get inviter's name
 		const inviterProfile = await getUser(currentUser.id);
 		const inviterName = inviterProfile?.sanityPerson?.name || 'Accelr8 Admin';
 
+		// 5. Send invitation email using magic link
 		const { success, error: emailError } = await sendResidentInvitation(
 			data.email,
 			data.name,
-			temporaryPassword,
+			inviteId, // We pass the inviteId as the temporaryPassword parameter for tracking
 			inviterName
 		);
 
@@ -375,8 +376,23 @@ export async function inviteResident(data: ResidentInviteData): Promise<UserProf
 			console.warn(`Warning: Invitation email to ${data.email} could not be sent: ${emailError}`);
 		}
 
-		// 6. Return the complete user profile
-		return getUser(authData.user.id) as Promise<UserProfile>;
+		// 6. Return a placeholder user profile with minimal information
+		// The actual user will be created when they accept the invitation
+		return {
+			id: inviteId, // Temporary ID
+			email: data.email,
+			role: 'resident',
+			onboarding_completed: false,
+			sanity_person_id: sanityPerson._id,
+			created_at: new Date().toISOString(),
+			updated_at: new Date().toISOString(),
+			sanityPerson: {
+				_id: sanityPerson._id,
+				name: data.name,
+				email: data.email,
+				isResident: true
+			} as Partial<SanityPerson>
+		} as UserProfile;
 	} catch (error) {
 		console.error('Error inviting resident:', error);
 		throw new ApiError(
@@ -442,13 +458,9 @@ export async function createUser(data: UserProfileInput): Promise<UserProfile> {
 			throw new ApiError('Failed to create user', 500);
 		}
 
-		// 3. Create extended user data
+		// 3. Create extended user data (excluding auth metadata fields)
 		const extendedUserData = {
 			id: authData.user.id,
-			email: data.email,
-			role: data.role || 'applicant',
-			onboarding_completed: data.onboarding_completed || false,
-			sanity_person_id: sanityPersonId,
 			phone_number: data.phone_number,
 			emergency_contact_name: data.emergency_contact_name,
 			emergency_contact_phone: data.emergency_contact_phone
@@ -567,7 +579,6 @@ export async function updateUser(id: string, data: UserProfileInput): Promise<Us
 						await supabase
 							.from('accelr8_users')
 							.update({
-								role: data.role,
 								onboarding_completed: data.onboarding_completed
 							})
 							.eq('id', id);
@@ -689,5 +700,34 @@ export async function getCurrentUser(supabaseServerClient: any): Promise<UserPro
 	} catch (error) {
 		console.error('Error fetching current user:', error);
 		return null;
+	}
+}
+
+/**
+ * Updates an invitation status to claimed when a user completes onboarding
+ */
+export async function claimInvitation(inviteId: string, userId: string): Promise<boolean> {
+	try {
+		const supabase = await createClient();
+
+		// Update the invitation record
+		const { error } = await supabase
+			.from('user_invitations')
+			.update({
+				status: 'claimed',
+				claimed_at: new Date().toISOString(),
+				user_id: userId
+			})
+			.eq('id', inviteId);
+
+		if (error) {
+			console.error('Error claiming invitation:', error);
+			return false;
+		}
+
+		return true;
+	} catch (error) {
+		console.error('Failed to claim invitation:', error);
+		return false;
 	}
 } 
