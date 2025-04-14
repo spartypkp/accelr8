@@ -12,7 +12,7 @@ import { claimInvitation } from '@/lib/api/users';
 import { Person as SanityPerson } from '@/lib/sanity/sanity.types';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 
 // Password validation helper
@@ -48,7 +48,6 @@ const validatePassword = (password: string): { valid: boolean; message: string; 
 function OnboardingContent() {
 	const { userProfile, isLoading, updateUserProfile, updatePassword } = useUser();
 	const router = useRouter();
-	const searchParams = useSearchParams();
 	const supabase = createClient();
 
 	const [step, setStep] = useState('welcome');
@@ -66,56 +65,62 @@ function OnboardingContent() {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState('');
 	const [invitationData, setInvitationData] = useState<any>(null);
-	const [processingInvitation, setProcessingInvitation] = useState(false);
+	const [processingInvitation, setProcessingInvitation] = useState(true);
 
-	// Check for invitation parameters in the URL
+	// Check for authenticated session and extract metadata
 	useEffect(() => {
-		const checkForInvitation = async () => {
-			// Magic link authentication will have a 'code' parameter
-			const code = searchParams.get('code');
-			if (!code) return;
-
-			setProcessingInvitation(true);
+		const checkSession = async () => {
 			try {
-				// Exchange the code for a session
-				const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+				// The auth/confirm route.ts has already verified any tokens
+				// Now we just need to check if there's a valid session
+				const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
-				if (error) {
-					setError(`Invalid or expired invitation link: ${error.message}`);
+				if (sessionError) {
+					console.error('Error getting session:', sessionError);
+					setError('There was a problem accessing your account.');
+					setProcessingInvitation(false);
 					return;
 				}
 
-				if (data.session) {
-					// Check if this is an invitation by looking at user metadata
-					const userMeta = data.session.user.user_metadata;
-					if (userMeta && userMeta.invitation) {
-						setInvitationData({
-							name: userMeta.name,
-							invited_by: userMeta.invited_by,
-							temp_password: userMeta.temp_password, // This is the inviteId
-							role: userMeta.role
-						});
+				if (!session) {
+					console.error('No session found');
+					setError('You must be logged in to complete onboarding.');
+					setProcessingInvitation(false);
+					return;
+				}
 
-						// Pre-fill the form with the invitation data
-						setFormData(prev => ({
-							...prev,
-							name: userMeta.name || ''
-						}));
+				// Extract user metadata
+				const userMeta = session.user.user_metadata;
+				console.log('User metadata:', userMeta);
 
-						// Move directly to the password step for invitations
-						setStep('password');
-					}
+				// Check if this is a resident invitation
+				if (userMeta && userMeta.role === 'resident') {
+					setInvitationData({
+						name: userMeta.name,
+						invited_by: userMeta.invited_by,
+						temp_password: userMeta.temp_password,
+						role: userMeta.role
+					});
+
+					// Pre-fill form data
+					setFormData(prev => ({
+						...prev,
+						name: userMeta.name || ''
+					}));
+
+					// Skip to password step for invited users
+					setStep('password');
 				}
 			} catch (err) {
-				console.error('Error processing invitation:', err);
-				setError('There was a problem processing your invitation link.');
+				console.error('Error checking session:', err);
+				setError('There was a problem processing your account information.');
 			} finally {
 				setProcessingInvitation(false);
 			}
 		};
 
-		checkForInvitation();
-	}, [searchParams, supabase.auth]);
+		checkSession();
+	}, [supabase.auth]);
 
 	// If user is already onboarded, redirect to dashboard
 	useEffect(() => {
@@ -123,7 +128,7 @@ function OnboardingContent() {
 			router.push('/dashboard');
 		}
 
-		// Pre-fill form data if available
+		// Pre-fill form data if available from user profile
 		if (userProfile) {
 			setFormData(prev => ({
 				...prev,
@@ -137,6 +142,19 @@ function OnboardingContent() {
 			}));
 		}
 	}, [isLoading, userProfile, router]);
+
+	// Return with a loading state if still processing
+	if (isLoading || processingInvitation) {
+		return (
+			<div className="flex h-screen items-center justify-center">
+				<div className="text-center">
+					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+					<h1 className="text-2xl font-bold mb-4">Loading your profile...</h1>
+					<p>Please wait while we set things up for you.</p>
+				</div>
+			</div>
+		);
+	}
 
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
@@ -207,19 +225,6 @@ function OnboardingContent() {
 			setSubmitting(false);
 		}
 	};
-
-	// Return with a loading state if still processing
-	if (isLoading || processingInvitation) {
-		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="text-center">
-					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-					<h1 className="text-2xl font-bold mb-4">Loading your profile...</h1>
-					<p>Please wait while we set things up for you.</p>
-				</div>
-			</div>
-		);
-	}
 
 	return (
 		<div className="container mx-auto py-10 max-w-3xl">
