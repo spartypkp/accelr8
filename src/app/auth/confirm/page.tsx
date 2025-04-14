@@ -3,9 +3,9 @@
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
-export default function AuthConfirmPage() {
+function ConfirmationContent() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const [error, setError] = useState<string | null>(null);
@@ -48,29 +48,42 @@ export default function AuthConfirmPage() {
 	}, [router, searchParams]);
 
 	return (
+		<div className="w-full max-w-md text-center">
+			{error ? (
+				<div className="p-6 bg-red-50 rounded-lg border border-red-200">
+					<h2 className="text-xl font-bold text-red-700 mb-2">Verification Failed</h2>
+					<p className="text-red-600">{error}</p>
+					<button
+						onClick={() => router.push('/login')}
+						className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+					>
+						Return to Login
+					</button>
+				</div>
+			) : (
+				<div className="flex flex-col items-center">
+					<Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+					<h2 className="text-xl font-semibold">Verifying your email...</h2>
+					<p className="text-muted-foreground mt-2">
+						Please wait while we confirm your identity.
+					</p>
+				</div>
+			)}
+		</div>
+	);
+}
+
+export default function AuthConfirmPage() {
+	return (
 		<div className="min-h-screen flex flex-col items-center justify-center p-4">
-			<div className="w-full max-w-md text-center">
-				{error ? (
-					<div className="p-6 bg-red-50 rounded-lg border border-red-200">
-						<h2 className="text-xl font-bold text-red-700 mb-2">Verification Failed</h2>
-						<p className="text-red-600">{error}</p>
-						<button
-							onClick={() => router.push('/login')}
-							className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
-						>
-							Return to Login
-						</button>
-					</div>
-				) : (
-					<div className="flex flex-col items-center">
-						<Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-						<h2 className="text-xl font-semibold">Verifying your email...</h2>
-						<p className="text-muted-foreground mt-2">
-							Please wait while we confirm your identity.
-						</p>
-					</div>
-				)}
-			</div>
+			<Suspense fallback={
+				<div className="flex flex-col items-center">
+					<Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+					<h2 className="text-xl font-semibold">Loading...</h2>
+				</div>
+			}>
+				<ConfirmationContent />
+			</Suspense>
 		</div>
 	);
 } 

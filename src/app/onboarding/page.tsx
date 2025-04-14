@@ -11,8 +11,9 @@ import { useUser } from '@/hooks/UserContext';
 import { claimInvitation } from '@/lib/api/users';
 import { Person as SanityPerson } from '@/lib/sanity/sanity.types';
 import { createClient } from '@/lib/supabase/client';
+import { Loader2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 // Password validation helper
 const validatePassword = (password: string): { valid: boolean; message: string; } => {
@@ -44,7 +45,7 @@ const validatePassword = (password: string): { valid: boolean; message: string; 
 	return { valid: true, message: '' };
 };
 
-export default function OnboardingPage() {
+function OnboardingContent() {
 	const { userProfile, isLoading, updateUserProfile, updatePassword } = useUser();
 	const router = useRouter();
 	const searchParams = useSearchParams();
@@ -137,18 +138,6 @@ export default function OnboardingPage() {
 		}
 	}, [isLoading, userProfile, router]);
 
-	// If not authenticated or still loading, show a loading state
-	if (isLoading || processingInvitation) {
-		return (
-			<div className="flex h-screen items-center justify-center">
-				<div className="text-center">
-					<h1 className="text-2xl font-bold mb-4">Loading your profile...</h1>
-					<p>Please wait while we set things up for you.</p>
-				</div>
-			</div>
-		);
-	}
-
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
 		setFormData(prev => ({ ...prev, [name]: value }));
@@ -218,6 +207,19 @@ export default function OnboardingPage() {
 			setSubmitting(false);
 		}
 	};
+
+	// Return with a loading state if still processing
+	if (isLoading || processingInvitation) {
+		return (
+			<div className="flex h-screen items-center justify-center">
+				<div className="text-center">
+					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+					<h1 className="text-2xl font-bold mb-4">Loading your profile...</h1>
+					<p>Please wait while we set things up for you.</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="container mx-auto py-10 max-w-3xl">
@@ -441,5 +443,21 @@ export default function OnboardingPage() {
 				</TabsContent>
 			</Tabs>
 		</div>
+	);
+}
+
+export default function OnboardingPage() {
+	return (
+		<Suspense fallback={
+			<div className="flex h-screen items-center justify-center">
+				<div className="text-center">
+					<Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+					<h1 className="text-2xl font-bold mb-4">Loading...</h1>
+					<p>Please wait while we set things up for you.</p>
+				</div>
+			</div>
+		}>
+			<OnboardingContent />
+		</Suspense>
 	);
 } 
