@@ -206,12 +206,13 @@ CREATE TABLE IF NOT EXISTS user_invitations (
 -- Add RLS policies
 ALTER TABLE user_invitations ENABLE ROW LEVEL SECURITY;
 
--- Allow admins to insert invitations
+-- Create a simplified INSERT policy using the correct WITH CHECK syntax
 CREATE POLICY "Admins can insert invitations" 
-ON user_invitations FOR INSERT 
+ON user_invitations 
+FOR INSERT 
 TO authenticated 
-USING (
-  (auth.jwt() ->> 'role') IN ('admin', 'super_admin')
+WITH CHECK (
+  auth.jwt() ->> 'role' IN ('admin', 'super_admin')
 );
 
 -- Allow admins to view all invitations
